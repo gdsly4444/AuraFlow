@@ -1,44 +1,51 @@
 # AuraFlow — Agent Guidelines
 
-AuraFlow is an Android app (`com.catclaw.aura`) in early scaffold. The Gradle root project name is **Aura**; the repo is **AuraFlow**.
+AuraFlow is an Android app (`com.catclaw.aura`). The Gradle root project name is **Aura**; the repo is **AuraFlow**.
 
 ## Stack
 
-- **Language**: Kotlin (no Compose yet — XML layouts + `AppCompatActivity`)
+- **Language**: Kotlin
+- **Architecture**: MVVM, single-activity + Fragment switching via `MainActivity`
 - **Build**: Gradle 9.4.1, AGP 9.2.1, version catalog (`gradle/libs.versions.toml`)
 - **SDK**: `minSdk` 35, `targetSdk` 36, `compileSdk` 36 (minor API 1)
-- **UI**: Material, ConstraintLayout, edge-to-edge insets in `MainActivity`
+- **UI**: XML layouts, ViewBinding, Material
+- **Maps**: Mapbox Maps SDK 11.x (`MapView` in `MapFragment`)
 
-## Layout
+## Package layout
 
 ```
-app/
-  src/main/java/com/catclaw/aura/   # Application code
-  src/main/res/                     # Layouts, themes, drawables
-  src/test/                         # JVM unit tests
-  src/androidTest/                  # Instrumented tests
-gradle/libs.versions.toml           # Dependency versions
+com.catclaw.aura/
+  MainActivity.kt                 # Fragment container + replaceFragment() helpers
+  ui/
+    base/
+      BaseFragment.kt             # lifecycle-aware Flow collection
+      BaseViewModel.kt            # StateFlow + SharedFlow helpers
+    map/                          # one package per screen
+      MapFragment.kt
+      MapViewModel.kt
+      MapUiState.kt
+      MapUiEvent.kt
+    <feature>/                    # add new screens here
+      FeatureFragment.kt
+      FeatureViewModel.kt
+      FeatureUiState.kt
+      FeatureUiEvent.kt
 ```
 
-Single module: `:app` (`settings.gradle`).
+Add a `showXxxFragment()` helper on [MainActivity] and call [replaceFragment] from there.
 
 ## Build and test
 
 ```bash
-./gradlew assembleDebug          # Debug APK
-./gradlew test                   # Unit tests
-./gradlew connectedAndroidTest   # Instrumented (device/emulator required)
+./gradlew assembleDebug
+./gradlew test
 ```
 
-`local.properties` (Android SDK path) is gitignored; required for local/CI builds.
+Mapbox token: `MAPBOX_ACCESS_TOKEN` in `local.properties` (injected via `resValue`).
 
 ## Conventions
 
-- Keep changes scoped; match existing View-system patterns until a deliberate Compose migration.
-- Prefer version catalog entries in `libs.versions.toml` for new dependencies.
-- Package namespace: `com.catclaw.aura`.
-- Do not commit secrets (`*.jks`, `google-services.json`, API keys).
-
-## Git state (as of init)
-
-Android scaffold may be staged but uncommitted on `main`. Only commit when the user explicitly asks.
+- ViewModels expose `StateFlow<UiState>` and `SharedFlow<UiEvent>` via `BaseViewModel`.
+- Fragments extend `BaseFragment`, use `by viewModels()`, collect state in `onBind`.
+- Prefer version catalog entries for new dependencies.
+- Do not commit secrets.
