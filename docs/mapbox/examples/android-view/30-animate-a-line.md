@@ -1,0 +1,267 @@
+# 折线动画（Animate a line）
+
+> 官方示例：[animate-a-line](https://docs.mapbox.com/android/maps/examples/android-view/animate-a-line/)
+
+## 示例效果
+
+![折线动画](./images/animate-a-line.png)
+
+## 功能说明
+
+对折线进行动态更新动画。
+
+<details>
+<summary>英文原文</summary>
+
+This example demonstrates how to create a snaking directions route in a Mapbox Maps SDK for Android application. The SnakingDirectionsRouteActivity class loads a style on the MapView to display a route. Instead of showing the entire route at once, it animates the route to "snake" from the origin to the destination. It makes use of the Mapbox Directions API to fetch the route information and displays it in the MapView. The activity sets up sources and layers for the map to visualize different components, such as markers, lines, and symbols. It requests the direction route using the Mapbox Directions API, processes the response to extract route steps, and then draws and animates the snaking directions route on the map. To achieve the snaking effect, the app progressively splits the route into segments and displays each one with a delay.
+
+</details>
+
+## 示例 Activity
+
+- `SnakingDirectionsRouteActivity.kt`
+
+## 示例代码
+
+```kotlin
+package com.mapbox.maps.testapp.examples.linesandpolygons
+
+import android.os.Bundle
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
+import com.mapbox.api.directions.v5.DirectionsCriteria
+import com.mapbox.api.directions.v5.DirectionsCriteria.GEOMETRY_POLYLINE
+import com.mapbox.api.directions.v5.MapboxDirections
+import com.mapbox.api.directions.v5.models.DirectionsResponse
+import com.mapbox.api.directions.v5.models.LegStep
+import com.mapbox.api.directions.v5.models.RouteOptions
+import com.mapbox.bindgen.Value
+import com.mapbox.common.MapboxOptions
+import com.mapbox.core.constants.Constants.PRECISION_5
+import com.mapbox.geojson.Feature
+import com.mapbox.geojson.FeatureCollection
+import com.mapbox.geojson.LineString
+import com.mapbox.geojson.Point
+import com.mapbox.maps.MapboxMap
+import com.mapbox.maps.Style
+import com.mapbox.maps.extension.style.image.image
+import com.mapbox.maps.extension.style.layers.generated.lineLayer
+import com.mapbox.maps.extension.style.layers.generated.symbolLayer
+import com.mapbox.maps.extension.style.layers.properties.generated.LineCap
+import com.mapbox.maps.extension.style.layers.properties.generated.LineJoin
+import com.mapbox.maps.extension.style.sources.generated.GeoJsonSource
+import com.mapbox.maps.extension.style.sources.generated.geoJsonSource
+import com.mapbox.maps.extension.style.sources.getSource
+import com.mapbox.maps.extension.style.style
+import com.mapbox.maps.logE
+import com.mapbox.maps.testapp.R
+import com.mapbox.maps.testapp.databinding.ActivityJavaservicesSnakingDirectionsRouteBinding
+import com.mapbox.turf.TurfConstants
+import com.mapbox.turf.TurfMisc
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+
+/**
+ * Rather than showing the directions route all at once, have it "snake" from the origin to destination.
+ */
+class SnakingDirectionsRouteActivity : AppCompatActivity() {
+
+  private var mapboxDirectionsClient: MapboxDirections? = null
+  private lateinit var binding: ActivityJavaservicesSnakingDirectionsRouteBinding
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    binding = ActivityJavaservicesSnakingDirectionsRouteBinding.inflate(layoutInflater)
+    setContentView(binding.root)
+
+    binding.mapView.mapboxMap.loadStyle(
+      style(Style.STANDARD) {
+        +image(
+          ICON_ID,
+          ContextCompat.getDrawable(
+            this@SnakingDirectionsRouteActivity,
+            R.drawable.ic_red_marker
+          )!!.toBitmap()
+        )
+        +geoJsonSource(SOURCE_ID) {
+          featureCollection(
+            FeatureCollection.fromFeatures(
+              listOf(
+                Feature.fromGeometry(PARIS_ORIGIN_POINT),
+                Feature.fromGeometry(TULLINS_DESTINATION_POINT)
+              )
+            )
+          )
+        }
+        +symbolLayer(LAYER_ID, SOURCE_ID) {
+          iconImage(ICON_ID)
+          iconOffset(listOf(0.0, -8.0))
+        }
+        // Add a source and LineLayer for the snaking directions route line
+        +geoJsonSource(DRIVING_ROUTE_POLYLINE_SOURCE_ID) {
+          geometry(PARIS_ORIGIN_POINT)
+        }
+        +layerAtPosition(
+          lineLayer(DRIVING_ROUTE_POLYLINE_LINE_LAYER_ID, DRIVING_ROUTE_POLYLINE_SOURCE_ID) {
+            lineWidth(NAVIGATION_LINE_WIDTH)
+            lineOpacity(NAVIGATION_LINE_OPACITY)
+            lineCap(LineCap.ROUND)
+            lineJoin(LineJoin.ROUND)
+            lineColor("#d742f4")
+          },
+          below = LAYER_ID
+        )
+      }
+    ) {
+      requestDirectionRoute()
+      binding.mapView.mapboxMap.setStyleImportConfigProperty("basemap", "theme", Value.valueOf("monochrome"))
+    }
+  }
+
+  /**
+   * Build and execute the Mapbox Directions API request
+   */
+  private fun requestDirectionRoute() {
+    val routeOptions =
+      RouteOptions.builder()
+        .coordinatesList(listOf(PARIS_ORIGIN_POINT, TULLINS_DESTINATION_POINT))
+        .overview(DirectionsCriteria.OVERVIEW_FULL)
+        .profile(DirectionsCriteria.PROFILE_DRIVING)
+        .geometries(GEOMETRY_POLYLINE)
+        .alternatives(true)
+        .steps(true)
+        .build()
+    mapboxDirectionsClient = MapboxDirections.builder()
+      .routeOptions(routeOptions)
+      .accessToken(MapboxOptions.accessToken)
+      .build()
+
+    mapboxDirectionsClient?.enqueueCall(object : Callback<DirectionsResponse> {
+      override fun onResponse(
+        call: Call<DirectionsResponse>,
+        response: Response<DirectionsResponse>
+      ) {
+        response.body()?.let { body ->
+          if (body.routes().isEmpty()) {
+            logE(TAG, "No routes found")
+            return
+          }
+          body.routes()[0]?.legs()?.get(0)?.steps()?.let { steps ->
+            drawRoute(steps)
+          }
+        } ?: run {
+          logE(TAG, "No routes found, make sure you set the right user and access token.")
+          return
+        }
+      }
+
+      override fun onFailure(call: Call<DirectionsResponse>, t: Throwable) {
+        Toast.makeText(
+          this@SnakingDirectionsRouteActivity,
+          R.string.snaking_directions_activity_error, Toast.LENGTH_SHORT
+        ).show()
+      }
+    })
+  }
+
+  private fun drawRoute(steps: List<LegStep>) {
+    val totalDistance = steps.sumOf(LegStep::distance)
+    val singleAnimationDistance = totalDistance / ANIMATION_STEPS
+
+    val line = steps
+      .mapNotNull { it.geometry() }
+      .map { LineString.fromPolyline(it, PRECISION_5) }
+      .flatMap { it.coordinates() }
+      .let(LineString::fromLngLats)
+
+    val features = MutableList(ANIMATION_STEPS) { index ->
+        TurfMisc.lineSliceAlong(
+          line,
+          singleAnimationDistance * index,
+          singleAnimationDistance * (index + 1),
+          TurfConstants.UNIT_METERS
+        )
+    }
+
+    val map = binding.mapView.mapboxMap
+      binding.mapView.postDelayed(
+        {
+          setCurrentLine(map, features, features.removeAt(0))
+        },
+        DRAW_SPEED_MILLISECONDS
+      )
+  }
+
+  private fun setCurrentLine(
+    map: MapboxMap,
+    features: MutableList<LineString>,
+    currentLineString: LineString
+  ) {
+    if (map.isValid()) {
+      // Draw current line
+      map.getStyle {
+        (it.getSource(DRIVING_ROUTE_POLYLINE_SOURCE_ID) as? GeoJsonSource)
+          ?.geometry(currentLineString)
+      }
+
+      // Extend the current line with the next segment
+      if (features.isNotEmpty()) {
+        val currentSegmentLngLats = currentLineString.flattenCoordinates().flattenLngLatArray
+        val nextSegmentLngLats = features.removeAt(0).flattenCoordinates().flattenLngLatArray
+        // Merge the current segment and the next one
+        val lngLats = DoubleArray(nextSegmentLngLats.size + currentSegmentLngLats.size)
+        System.arraycopy(currentSegmentLngLats, 0, lngLats, 0, currentSegmentLngLats.size)
+        System.arraycopy(
+          nextSegmentLngLats,
+          0,
+          lngLats,
+          currentSegmentLngLats.size,
+          nextSegmentLngLats.size
+        )
+        val nextLine = LineString.fromFlattenArrayOfPoints(lngLats, null)
+        binding.mapView.postDelayed(
+          { setCurrentLine(map, features, nextLine) },
+          DRAW_SPEED_MILLISECONDS
+        )
+      }
+    }
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    mapboxDirectionsClient?.cancelCall()
+  }
+
+  companion object {
+    private const val TAG = "SnakingDirectionsRouteActivity"
+    private const val ICON_ID = "icon-id"
+    private const val SOURCE_ID = "source-id"
+    private const val LAYER_ID = "layer-id"
+    private const val NAVIGATION_LINE_WIDTH = 6.0
+    private const val NAVIGATION_LINE_OPACITY = 0.8
+    private const val DRIVING_ROUTE_POLYLINE_LINE_LAYER_ID = "DRIVING_ROUTE_POLYLINE_LINE_LAYER_ID"
+    private const val DRIVING_ROUTE_POLYLINE_SOURCE_ID = "DRIVING_ROUTE_POLYLINE_SOURCE_ID"
+    private const val DRAW_SPEED_MILLISECONDS = 50L
+    private const val ANIMATION_STEPS = 200
+    private val PARIS_ORIGIN_POINT = Point.fromLngLat(2.35222, 48.856614)
+    private val TULLINS_DESTINATION_POINT = Point.fromLngLat(5.486011, 45.299410)
+  }
+}
+```
+
+## 在 Aura 项目中使用
+
+- UI 框架：**Android View**（与 Aura 当前 `MapFragment` + `MapView` 一致）
+- 包名请替换为 `com.catclaw.aura`
+- 需在 `local.properties` 配置 `MAPBOX_ACCESS_TOKEN`
+- 部分示例依赖 `assets/` 或额外布局文件，请参考 GitHub 示例工程
+
+## 参考链接
+
+- [官方文档（英文）](https://docs.mapbox.com/android/maps/examples/android-view/animate-a-line/)
+- [GitHub 源码](https://github.com/mapbox/mapbox-maps-android/blob/v11.24.3/app/src/main/java/com/mapbox/maps/testapp/examples/linesandpolygons/SnakingDirectionsRouteActivity.kt)
+- [Android View 示例索引](./README.md)
+- [Mapbox 中文指南](../../README.md)

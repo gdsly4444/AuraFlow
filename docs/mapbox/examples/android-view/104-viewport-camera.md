@@ -1,0 +1,224 @@
+# Viewport 相机（Viewport camera）
+
+> 官方示例：[viewport-camera](https://docs.mapbox.com/android/maps/examples/android-view/viewport-camera/)
+
+## 示例效果
+
+![Viewport 相机](./images/viewport-camera.png)
+
+## 功能说明
+
+Viewport 相机功能演示。
+
+<details>
+<summary>英文原文</summary>
+
+This example demonstrates the usage of the Viewport plugin in the Mapbox Maps SDK for Android for controlling the camera. It shows a button that allows toggling between the following and overview modes. Users can interact with the button to switch between these viewport states. The activity also includes features related to handling user locations. The viewport states showcased in this example are FollowPuckViewportState and OverviewViewportState. The switching behavior is controlled by the state transitions facilitated by the ViewportPlugin.
+
+</details>
+
+## 示例 Activity
+
+- `ViewportShowcaseActivity.kt`
+
+## 示例代码
+
+```kotlin
+package com.mapbox.maps.testapp.examples.viewport
+
+import android.annotation.SuppressLint
+import android.content.res.Configuration
+import android.os.Bundle
+import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.mapbox.api.directions.v5.models.DirectionsResponse
+import com.mapbox.core.constants.Constants
+import com.mapbox.geojson.LineString
+import com.mapbox.geojson.Point
+import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.EdgeInsets
+import com.mapbox.maps.ImageHolder
+import com.mapbox.maps.logI
+import com.mapbox.maps.plugin.LocationPuck2D
+import com.mapbox.maps.plugin.locationcomponent.location
+import com.mapbox.maps.plugin.viewport.ViewportPlugin
+import com.mapbox.maps.plugin.viewport.ViewportStatus
+import com.mapbox.maps.plugin.viewport.data.FollowPuckViewportStateOptions
+import com.mapbox.maps.plugin.viewport.data.OverviewViewportStateOptions
+import com.mapbox.maps.plugin.viewport.state.FollowPuckViewportState
+import com.mapbox.maps.plugin.viewport.state.OverviewViewportState
+import com.mapbox.maps.plugin.viewport.state.ViewportState
+import com.mapbox.maps.plugin.viewport.viewport
+import com.mapbox.maps.testapp.R
+import com.mapbox.maps.testapp.databinding.ActivityViewportAnimationBinding
+import com.mapbox.maps.testapp.examples.annotation.AnnotationUtils
+import com.mapbox.maps.testapp.utils.SimulateRouteLocationProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * Showcase the use age of viewport plugin.
+ *
+ * Use button to toggle the following and overview mode.
+ *
+ * @see [User location guide](https://docs.mapbox.com/android/maps/guides/user-location/#location-tracking)
+ */
+class ViewportShowcaseActivity : AppCompatActivity() {
+  private lateinit var viewportButton: Button
+  private lateinit var followPuckViewportState: FollowPuckViewportState
+  private lateinit var overviewViewportState: OverviewViewportState
+  private val pixelDensity by lazy { resources.displayMetrics.density }
+  private lateinit var simulateRouteLocationProvider: SimulateRouteLocationProvider
+
+  private val overviewPadding: EdgeInsets by lazy {
+    EdgeInsets(
+      140.0 * pixelDensity,
+      40.0 * pixelDensity,
+      120.0 * pixelDensity,
+      40.0 * pixelDensity
+    )
+  }
+  private val landscapeOverviewPadding: EdgeInsets by lazy {
+    EdgeInsets(
+      30.0 * pixelDensity,
+      380.0 * pixelDensity,
+      20.0 * pixelDensity,
+      20.0 * pixelDensity
+    )
+  }
+  private val followingPadding: EdgeInsets by lazy {
+    EdgeInsets(
+      180.0 * pixelDensity,
+      40.0 * pixelDensity,
+      150.0 * pixelDensity,
+      40.0 * pixelDensity
+    )
+  }
+  private val landscapeFollowingPadding: EdgeInsets by lazy {
+    EdgeInsets(
+      30.0 * pixelDensity,
+      380.0 * pixelDensity,
+      110.0 * pixelDensity,
+      40.0 * pixelDensity
+    )
+  }
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    val binding = ActivityViewportAnimationBinding.inflate(layoutInflater)
+    setContentView(binding.root)
+    viewportButton = binding.switchButton
+    val mapView = binding.mapView
+    lifecycleScope.launch {
+      mapView.mapboxMap.apply {
+        setCamera(
+          CameraOptions.Builder()
+            .zoom(14.0)
+            .center(Point.fromLngLat(POINT_LNG, POINT_LAT))
+            .build()
+        )
+        val route = withContext(Dispatchers.Default) {
+          LineString.fromPolyline(
+            DirectionsResponse.fromJson(
+              AnnotationUtils.loadStringFromAssets(
+                this@ViewportShowcaseActivity,
+                NAVIGATION_ROUTE_JSON_NAME
+              )
+            ).routes()[0].geometry()!!,
+            Constants.PRECISION_6
+          )
+        }
+        simulateRouteLocationProvider = SimulateRouteLocationProvider(route)
+        mapView.location.apply {
+          setLocationProvider(simulateRouteLocationProvider)
+          updateSettings {
+            locationPuck = LocationPuck2D(
+              bearingImage = ImageHolder.from(R.drawable.mapbox_mylocation_icon_bearing)
+            )
+            puckBearingEnabled = true
+          }
+        }
+        setupViewportPlugin(mapView.viewport)
+      }
+    }
+  }
+
+  @SuppressLint("SetTextI18n")
+  private fun setupViewportPlugin(viewport: ViewportPlugin) {
+    followPuckViewportState =
+      viewport.makeFollowPuckViewportState(FollowPuckViewportStateOptions.Builder().build())
+    overviewViewportState =
+      viewport.makeOverviewViewportState(
+        OverviewViewportStateOptions.Builder().geometry(simulateRouteLocationProvider.route).build()
+      )
+    viewport.addStatusObserver { from, to, reason ->
+      logI(
+        TAG,
+        """
+        ViewportStatus changed:
+            from:         $from,
+            to:           $to,
+            with reason:         $reason
+        """.trimIndent()
+      )
+      when (to.getCurrentOrNextState()) {
+        is FollowPuckViewportState -> viewportButton.text = OVERVIEW
+        else -> viewportButton.text = FOLLOW
+      }
+    }
+    if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+      followPuckViewportState.apply {
+        options = options.toBuilder().padding(landscapeFollowingPadding).build()
+      }
+      overviewViewportState.apply {
+        options = options.toBuilder().padding(landscapeOverviewPadding).build()
+      }
+    } else {
+      followPuckViewportState.apply {
+        options = options.toBuilder().padding(followingPadding).build()
+      }
+      overviewViewportState.apply {
+        options = options.toBuilder().padding(overviewPadding).build()
+      }
+    }
+    viewportButton.setOnClickListener {
+      when (viewportButton.text) {
+        FOLLOW -> viewport.transitionTo(followPuckViewportState)
+        OVERVIEW -> viewport.transitionTo(overviewViewportState)
+      }
+    }
+  }
+
+  companion object {
+    private const val TAG = "ViewportShowcase"
+    private const val FOLLOW = "Follow"
+    private const val OVERVIEW = "Overview"
+    private const val POINT_LAT = 34.052235
+    private const val POINT_LNG = -118.243683
+    private const val NAVIGATION_ROUTE_JSON_NAME = "navigation_route.json"
+  }
+}
+
+private fun ViewportStatus.getCurrentOrNextState(): ViewportState? =
+  when (this) {
+    is ViewportStatus.State -> state
+    is ViewportStatus.Transition -> toState
+    ViewportStatus.Idle -> null
+  }
+```
+
+## 在 Aura 项目中使用
+
+- UI 框架：**Android View**（与 Aura 当前 `MapFragment` + `MapView` 一致）
+- 包名请替换为 `com.catclaw.aura`
+- 需在 `local.properties` 配置 `MAPBOX_ACCESS_TOKEN`
+- 部分示例依赖 `assets/` 或额外布局文件，请参考 GitHub 示例工程
+
+## 参考链接
+
+- [官方文档（英文）](https://docs.mapbox.com/android/maps/examples/android-view/viewport-camera/)
+- [GitHub 源码](https://github.com/mapbox/mapbox-maps-android/blob/v11.24.3/app/src/main/java/com/mapbox/maps/testapp/examples/viewport/ViewportShowcaseActivity.kt)
+- [Android View 示例索引](./README.md)
+- [Mapbox 中文指南](../../README.md)

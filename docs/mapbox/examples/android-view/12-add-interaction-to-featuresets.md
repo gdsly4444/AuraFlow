@@ -1,0 +1,229 @@
+# 预定义 Featureset 交互（Add interactions to predefined featuresets）
+
+> 官方示例：[add-interaction-to-featuresets](https://docs.mapbox.com/android/maps/examples/android-view/add-interaction-to-featuresets/)
+
+## 示例效果
+
+![预定义 Featureset 交互](./images/add-interaction-to-featuresets.png)
+
+## 功能说明
+
+高亮 Mapbox Standard 样式中预定义的 POI（兴趣点）并添加交互。
+
+<details>
+<summary>英文原文</summary>
+
+The Mapbox Standard Style exposes three featuresets for  buildings, place labels, and points of interest (POIs). This example shows how to use addInteraction with a featureset to set the highlight and select feature states for these predefined featuresets, causing the interacted feature to change its visual appearance. addInteraction is also used to add a click listener to the map itself, which is used to clear the feature states and reset the visual appearance of the map.
+
+</details>
+
+## 示例 Activity
+
+- `StandardStyleInteractionsActivity.kt`
+
+## 示例代码
+
+```kotlin
+package com.mapbox.maps.testapp.examples
+
+import android.annotation.SuppressLint
+import android.graphics.Color
+import android.os.Bundle
+import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
+import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.mapbox.geojson.Point
+import com.mapbox.maps.ClickInteraction
+import com.mapbox.maps.MapInitOptions
+import com.mapbox.maps.MapView
+import com.mapbox.maps.MapboxDelicateApi
+import com.mapbox.maps.MapboxExperimental
+import com.mapbox.maps.MapboxMap
+import com.mapbox.maps.Style
+import com.mapbox.maps.ViewAnnotationAnchor
+import com.mapbox.maps.dsl.cameraOptions
+import com.mapbox.maps.extension.style.expressions.dsl.generated.boolean
+import com.mapbox.maps.interactions.standard.generated.StandardBuildings
+import com.mapbox.maps.interactions.standard.generated.StandardBuildingsState
+import com.mapbox.maps.interactions.standard.generated.StandardPlaceLabelsState
+import com.mapbox.maps.interactions.standard.generated.StandardPoiFeature
+import com.mapbox.maps.interactions.standard.generated.StandardPoiState
+import com.mapbox.maps.interactions.standard.generated.StandardPoiStateKey
+import com.mapbox.maps.interactions.standard.generated.standardBuildings
+import com.mapbox.maps.interactions.standard.generated.standardPlaceLabels
+import com.mapbox.maps.interactions.standard.generated.standardPoi
+import com.mapbox.maps.testapp.R
+import com.mapbox.maps.viewannotation.annotationAnchor
+import com.mapbox.maps.viewannotation.geometry
+import com.mapbox.maps.viewannotation.viewAnnotationOptions
+
+/**
+ * Interactive map elements when using experimental Mapbox Standard Style.
+ */
+@OptIn(MapboxExperimental::class)
+class StandardStyleInteractionsActivity : AppCompatActivity() {
+  private lateinit var mapboxMap: MapboxMap
+
+  @OptIn(MapboxDelicateApi::class)
+  @SuppressLint("SetTextI18n")
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    val mapView = MapView(
+      this,
+      MapInitOptions(
+        this,
+        cameraOptions = cameraOptions {
+          center(HELSINKI)
+          zoom(15.0)
+          pitch(30.0)
+        }
+      )
+    )
+    setContentView(mapView)
+    mapboxMap = mapView.mapboxMap
+    val map = mapView.mapboxMap
+    val selectedPoiList = mutableListOf<StandardPoiFeature>()
+
+    map.loadStyle(Style.STANDARD)
+
+    // the most basic use-case to highlight clicked building
+    map.addInteraction(
+      ClickInteraction.standardBuildings { selectedBuilding, _ ->
+        map.setFeatureState(
+          selectedBuilding,
+          StandardBuildingsState {
+            select(true)
+          }
+        )
+        return@standardBuildings true
+      }
+    )
+
+    // a bit more advanced use-case to fade a place label and also show a pop-up
+    // with clicked place label class
+    map.addInteraction(
+      ClickInteraction.standardPlaceLabels { selectedPlaceLabel, _ ->
+        Toast.makeText(this, selectedPlaceLabel.`class` ?: "No class!", Toast.LENGTH_SHORT).show()
+        map.setFeatureState(
+          selectedPlaceLabel,
+          StandardPlaceLabelsState {
+            select(true)
+          }
+        )
+        return@standardPlaceLabels true
+      }
+    )
+
+    // the most advanced use case to:
+    //  1. Hide clicked POI.
+    //  2. Show the Android View Annotation instead in the place where user clicked.
+    //  3. Clicking the Android View Annotation removes it and shows hidden POI again.
+    //  4. Text color of the Android View Annotation is driven by POI type: RED if it's transit and BLUE otherwise.
+    map.addInteraction(
+      ClickInteraction.standardPoi { selectedPoi, _ ->
+        map.setFeatureState(
+          selectedPoi,
+          StandardPoiState {
+            hide(true)
+          }
+        ) {
+          selectedPoiList.add(selectedPoi)
+          mapView.viewAnnotationManager.addViewAnnotation(
+            TextView(this).apply {
+              text = "${selectedPoi.name}\nGroup: ${selectedPoi.group}"
+              if (selectedPoi.group == "transit") {
+                setTextColor(Color.RED)
+              } else {
+                setTextColor(Color.BLUE)
+              }
+              gravity = Gravity.CENTER
+              layoutParams = ViewGroup.LayoutParams(WRAP_CONTENT, WRAP_CONTENT)
+              // when clicking on the view annotation - remove it and bring the map POI back
+              setOnClickListener { selectedPoiView ->
+                // check with getter to get the most actual state
+                map.getFeatureState(selectedPoi) { currentState ->
+                  if (currentState.hide == true) {
+                    // show POI again and remove the view annotation
+                    map.setFeatureState(
+                      selectedPoi,
+                      StandardPoiState {
+                        hide(false)
+                      }
+                    )
+                    mapView.viewAnnotationManager.removeViewAnnotation(selectedPoiView)
+                  }
+                }
+              }
+            },
+            viewAnnotationOptions {
+              geometry(selectedPoi.geometry)
+              annotationAnchor {
+                anchor(ViewAnnotationAnchor.CENTER)
+              }
+            }
+          )
+        }
+        return@standardPoi true
+      }
+    )
+
+    // when clicked on the map - remove the feature state from all selected POIs
+    // and show them as defined in Mapbox Standard Style
+    map.addInteraction(
+      ClickInteraction { _ ->
+        selectedPoiList.forEach { selectedPoi ->
+          map.removeFeatureState(
+            selectedPoi,
+            StandardPoiStateKey.HIDE
+          )
+        }
+        map.resetFeatureStateExpressions()
+        selectedPoiList.clear()
+        mapView.viewAnnotationManager.removeAllViewAnnotations()
+
+        Toast.makeText(this, "Map clicked, removing selected POIs if any", Toast.LENGTH_SHORT).show()
+        true
+      }
+    )
+  }
+
+  override fun onCreateOptionsMenu(menu: Menu): Boolean {
+    menuInflater.inflate(R.menu.menu_standard_style_interactions, menu)
+    return true
+  }
+
+  @OptIn(MapboxDelicateApi::class)
+  override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    return when (item.itemId) {
+      R.id.menu_action_select_all -> {
+        mapboxMap.setFeatureStateExpression(1, StandardBuildings(), boolean { literal(true) }, StandardBuildingsState.Builder().select(true).build())
+        true
+      }
+      else -> super.onOptionsItemSelected(item)
+    }
+  }
+
+  private companion object {
+    private val HELSINKI = Point.fromLngLat(24.94180921290157, 60.171227338006844)
+  }
+}
+```
+
+## 在 Aura 项目中使用
+
+- UI 框架：**Android View**（与 Aura 当前 `MapFragment` + `MapView` 一致）
+- 包名请替换为 `com.catclaw.aura`
+- 需在 `local.properties` 配置 `MAPBOX_ACCESS_TOKEN`
+- 部分示例依赖 `assets/` 或额外布局文件，请参考 GitHub 示例工程
+
+## 参考链接
+
+- [官方文档（英文）](https://docs.mapbox.com/android/maps/examples/android-view/add-interaction-to-featuresets/)
+- [GitHub 源码](https://github.com/mapbox/mapbox-maps-android/blob/v11.24.3/app/src/main/java/com/mapbox/maps/testapp/examples/StandardStyleInteractionsActivity.kt)
+- [Android View 示例索引](./README.md)
+- [Mapbox 中文指南](../../README.md)
