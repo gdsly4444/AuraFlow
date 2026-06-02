@@ -1,10 +1,14 @@
 package com.catclaw.aura.ui.map
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
 import androidx.fragment.app.viewModels
 import com.catclaw.aura.R
+import com.catclaw.aura.data.network.NetworkClient
+import com.catclaw.aura.data.network.callback.HttpCallback
+import com.catclaw.aura.data.network.config.NetworkConstants
 import com.catclaw.aura.ui.base.BaseFragment
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
@@ -42,20 +46,29 @@ class MapFragment : BaseFragment(R.layout.fragment_map) {
                 FrameLayout.LayoutParams.MATCH_PARENT,
             )
         }
-    }
 
-    override fun onStart() {
-        super.onStart()
-        mapView?.onStart()
-    }
 
-    override fun onStop() {
-        super.onStop()
-        mapView?.onStop()
+        NetworkClient.postJson(
+            baseUrlKey = NetworkConstants.BASE_URL_MAIN,
+            path = "posts",
+            bodyParams = mapOf(
+                "title" to "Aura test",
+                "body" to "hello network",
+                "userId" to 1,
+            ),
+            callback = object : HttpCallback {
+                override fun onSuccess(json: String) {
+                    Log.d("NetworkTest", json)
+                    // 会返回带 id 的假创建结果
+                }
+                override fun onFailed(exception: Exception) {
+                    Log.e("NetworkTest", "failed", exception)
+                }
+            },
+        )
     }
 
     override fun onDestroyView() {
-        mapView?.onDestroy()
         mapView = null
         super.onDestroyView()
     }

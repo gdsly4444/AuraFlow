@@ -1,6 +1,6 @@
 # Mapbox Maps SDK for Android — 中文指南
 
-本目录为 [Mapbox Android Maps 官方指南](https://docs.mapbox.com/android/maps/guides/) 的中文译本，便于在 AuraFlow 项目中集成地图能力。
+本目录为 [Mapbox Android Maps 官方指南](https://docs.mapbox.com/android/maps/guides/) 的中文译本，便于在 **Aura** 项目中集成地图能力。
 
 **当前 SDK 版本（文档基准）**：v11.24.3
 
@@ -26,7 +26,7 @@
 | 16 | [地图上显示位置](./16-地图上显示位置.md) | [location-on-map](https://docs.mapbox.com/android/maps/guides/user-location/location-on-map/) |
 | 17 | [用户交互与手势](./17-用户交互与手势.md) | [gestures](https://docs.mapbox.com/android/maps/guides/gestures/) |
 
-## 与 AuraFlow 的兼容性提示
+## 与 Aura 的兼容性提示
 
 | 项目现状 | Mapbox 要求 | 说明 |
 |----------|-------------|------|

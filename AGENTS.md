@@ -1,6 +1,6 @@
-# AuraFlow — Agent Guidelines
+# Aura — Agent Guidelines
 
-AuraFlow is an Android app (`com.catclaw.aura`). The Gradle root project name is **Aura**; the repo is **AuraFlow**.
+**Aura** is the Android app (`com.catclaw.aura`). Gradle root project name: **Aura**.
 
 ## Stack
 
@@ -15,24 +15,22 @@ AuraFlow is an Android app (`com.catclaw.aura`). The Gradle root project name is
 
 ```
 com.catclaw.aura/
-  MainActivity.kt                 # Fragment container + replaceFragment() helpers
+  AuraApplication.kt            # NetworkClient.init()
+  MainActivity.kt               # Fragment container + replaceFragment() helpers
+  data/
+    network/                    # Retrofit + OkHttp (NetworkClient)
+    local/                      # Room (entities TBD)
   ui/
     base/
-      BaseFragment.kt             # lifecycle-aware Flow collection
-      BaseViewModel.kt            # StateFlow + SharedFlow helpers
-    map/                          # one package per screen
-      MapFragment.kt
-      MapViewModel.kt
-      MapUiState.kt
-      MapUiEvent.kt
-    <feature>/                    # add new screens here
-      FeatureFragment.kt
-      FeatureViewModel.kt
-      FeatureUiState.kt
-      FeatureUiEvent.kt
+    map/
+    <feature>/
 ```
 
-Add a `showXxxFragment()` helper on [MainActivity] and call [replaceFragment] from there.
+Add a `showXxxFragment()` helper on MainActivity and call `replaceFragment` from there.
+
+## Network
+
+Init in `AuraApplication`. Usage: [app/docs/network.md](./app/docs/network.md) (`NetworkClient.get` / `postJson` / `postForm` + `HttpCallback`).
 
 ## Build and test
 
