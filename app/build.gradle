@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.ksp)
 }
 
 def localProperties = new Properties()
@@ -13,6 +14,13 @@ if (mapboxAccessToken.isEmpty()) {
     logger.warn(
         "MAPBOX_ACCESS_TOKEN is not set in local.properties — Mapbox maps will not load. " +
         "Copy local.properties.example and add your public token (pk.)."
+    )
+}
+
+def dashscopeApiKey = localProperties.getProperty("DASHSCOPE_API_KEY", "")
+if (dashscopeApiKey.isEmpty()) {
+    logger.warn(
+        "DASHSCOPE_API_KEY is not set in local.properties — scene description will be unavailable."
     )
 }
 
@@ -35,6 +43,8 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         resValue "string", "mapbox_access_token", mapboxAccessToken
+
+        buildConfigField "String", "DASHSCOPE_API_KEY", "\"${dashscopeApiKey}\""
     }
 
     buildTypes {
@@ -70,6 +80,9 @@ dependencies {
     implementation libs.okhttp.logging
     implementation libs.androidx.room.runtime
     implementation libs.androidx.room.ktx
+    ksp libs.androidx.room.compiler
+    implementation libs.androidx.coordinatorlayout
+    implementation libs.androidx.recyclerview
     implementation libs.androidx.camera.core
     implementation libs.androidx.camera.camera2
     implementation libs.androidx.camera.lifecycle

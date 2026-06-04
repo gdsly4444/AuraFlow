@@ -1,0 +1,9 @@
+# Copy to local.properties (never commit local.properties)
+
+sdk.dir=/path/to/Android/Sdk
+
+# Mapbox public token (pk.)
+MAPBOX_ACCESS_TOKEN=
+
+# Alibaba Cloud DashScope (百炼) — https://help.aliyun.com/zh/model-studio/get-api-key
+DASHSCOPE_API_KEY=

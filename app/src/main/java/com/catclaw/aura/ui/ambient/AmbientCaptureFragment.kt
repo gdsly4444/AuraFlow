@@ -23,6 +23,7 @@ import com.catclaw.aura.data.ambient.capture.NotificationListenerAccess
 import com.catclaw.aura.data.ambient.model.AmbientMoment
 import com.catclaw.aura.databinding.FragmentAmbientCaptureBinding
 import com.catclaw.aura.ui.base.BaseFragment
+import com.catclaw.aura.ui.util.ImmersiveInsets
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapInitOptions
@@ -75,6 +76,7 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
 
     override fun onBind(view: View, savedInstanceState: Bundle?) {
         _binding = FragmentAmbientCaptureBinding.bind(view)
+        ImmersiveInsets.applyPadding(binding.ambientScroll, basePaddingDp = 16)
         binding.buttonCapture.setOnClickListener { onCaptureClicked() }
         binding.buttonEnableNotificationAccess.setOnClickListener {
             startActivity(NotificationListenerAccess.settingsIntent())
@@ -92,6 +94,7 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
             binding.textError.text = state.errorMessage
 
             state.moment?.let { renderMoment(it) }
+            renderWorkflowStatus(state)
         }
 
         viewModel.uiEvent.collectWithLifecycle { event ->
@@ -328,6 +331,16 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
                 append(getString(R.string.ambient_music_package, music.packageName))
             }
         }
+    }
+
+    private fun renderWorkflowStatus(state: AmbientCaptureUiState) {
+        val show = state.workflowSubmitted && state.workflowId != null
+        binding.cardWorkflowStatus.isVisible = show
+        if (!show) return
+        binding.textWorkflowStatus.text = getString(
+            R.string.ambient_workflow_status_message,
+            state.workflowId!!.take(8),
+        )
     }
 
     private fun renderLocation(moment: AmbientMoment) {

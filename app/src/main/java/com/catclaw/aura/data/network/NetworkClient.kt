@@ -137,10 +137,22 @@ object NetworkClient {
         headers: Map<String, String> = emptyMap(),
         callback: HttpCallback,
     ) {
+        postJsonRaw(baseUrlKey, path, JSONObject(bodyParams).toString(), headers, callback)
+    }
+
+    /**
+     * POST JSON with a pre-serialized body (e.g. multimodal chat completions).
+     */
+    fun postJsonRaw(
+        baseUrlKey: String = NetworkConstants.BASE_URL_MAIN,
+        path: String,
+        jsonBody: String,
+        headers: Map<String, String> = emptyMap(),
+        callback: HttpCallback,
+    ) {
         execute(callback) {
             val url = resolveUrl(baseUrlKey, path)
-            val json = JSONObject(bodyParams).toString()
-            val body = json.toRequestBody(JSON_MEDIA_TYPE)
+            val body = jsonBody.toRequestBody(JSON_MEDIA_TYPE)
             val response = apiService.postJson(url, body, headers)
             response.toJsonOrThrow()
         }

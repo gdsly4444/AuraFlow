@@ -26,4 +26,36 @@
     <string name="ambient_notification_access_hint">在列表中找到 Aura 并允许访问通知，即可从音乐 App 的播放通知中读取歌名与歌手。</string>
     <string name="ambient_location_ok">纬度 %1$.6f，经度 %2$.6f\n精度约 %3$.1f m（%4$s）</string>
     <string name="ambient_location_failed">定位失败：%1$s</string>
+    <string name="ambient_section_scene_description">AI 场景描述（百炼）</string>
+    <string name="ambient_generate_scene_description">生成场景描述</string>
+    <string name="ambient_scene_description_hint">采样完成后点击，将封面、短片、环境音与元数据发送至 DashScope 生成中文描述（需网络与 API Key）。</string>
+    <string name="ambient_scene_description_failed">场景描述失败：%1$s</string>
+    <string name="ambient_workflow_status_title">后台生成</string>
+    <string name="ambient_workflow_status_message">流程 %1$s 已在后台生成卡片。可返回首页查看列表，或继续发起新的采样。</string>
+    <string name="moment_list_title">我的瞬间</string>
+    <string name="moment_sheet_expand">展开瞬间列表</string>
+    <string name="moment_list_empty">暂无瞬间卡片。点击右下角开始环境采样。</string>
+    <string name="moment_list_active_count">%1$d 项生成中</string>
+    <string name="home_generating_banner_title">%1$d 个瞬间生成中</string>
+    <string name="home_generating_banner_phase">%1$s</string>
+    <string name="moment_list_generating_title">生成中 · %1$s</string>
+    <string name="moment_list_no_description">场景描述生成中或不可用</string>
+    <string name="moment_list_meta_fallback">环境瞬间</string>
+    <string name="moment_list_location_short" formatted="false">%.4f, %.4f</string>
+    <string name="moment_phase_queued">排队中</string>
+    <string name="moment_phase_archiving">保存媒体…</string>
+    <string name="moment_phase_generating">生成场景描述…</string>
+    <string name="moment_phase_failed">失败</string>
+    <string name="moment_phase_done">完成</string>
+    <string name="moment_workflow_notification_title">Aura 正在生成瞬间卡片</string>
+    <string name="moment_workflow_notification_text">%1$d 个任务进行中</string>
+    <string name="moment_workflow_channel_name">瞬间生成</string>
+    <string name="moment_detail_scene_title">场景描述</string>
+    <string name="moment_detail_location_unknown">位置未知</string>
+    <string name="moment_delete_confirm_title">删除瞬间卡片？</string>
+    <string name="moment_delete_confirm_message">将删除该卡片及本地保存的封面、视频与音频，此操作不可恢复。</string>
+    <string name="moment_delete_confirm_positive">删除</string>
+    <string name="moment_delete_confirm_negative">取消</string>
+    <string name="moment_delete_in_progress">正在生成中，请完成后再删除</string>
+    <string name="moment_delete_done">已删除</string>
 </resources>

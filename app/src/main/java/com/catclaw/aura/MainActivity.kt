@@ -1,29 +1,40 @@
 package com.catclaw.aura
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.catclaw.aura.ui.ambient.AmbientCaptureFragment
 import com.catclaw.aura.ui.map.MapFragment
+import com.catclaw.aura.ui.moment.MomentDetailFragment
 
 /**
  * Single-activity host. Fragment navigation is handled by [replaceFragment] and screen helpers below.
  */
 class MainActivity : AppCompatActivity() {
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* optional; foreground still works when denied on some OEMs */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.fragment_container)) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
         }
+        requestNotificationPermissionIfNeeded()
+        setContentView(R.layout.activity_main)
         if (savedInstanceState == null) {
             showMapFragment()
         }
@@ -37,6 +48,15 @@ class MainActivity : AppCompatActivity() {
     /** Shows ambient capture (video + audio + music + location). */
     fun showAmbientCaptureFragment(addToBackStack: Boolean = true) {
         replaceFragment(AmbientCaptureFragment(), TAG_AMBIENT, addToBackStack)
+    }
+
+    /** Full-screen rounded moment card detail. */
+    fun showMomentDetailFragment(cardId: String, addToBackStack: Boolean = true) {
+        replaceFragment(
+            MomentDetailFragment.newInstance(cardId),
+            "$TAG_MOMENT_DETAIL:$cardId",
+            addToBackStack,
+        )
     }
 
     /**
@@ -59,8 +79,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
     companion object {
         const val TAG_MAP = "map"
         const val TAG_AMBIENT = "ambient_capture"
+        const val TAG_MOMENT_DETAIL = "moment_detail"
     }
 }

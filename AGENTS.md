@@ -45,6 +45,10 @@ Or use `./scripts/gradlew-local.sh assembleDebug` (sets `GRADLE_USER_HOME` and `
 
 Mapbox token: `MAPBOX_ACCESS_TOKEN` in `local.properties` (injected via `resValue`).
 
+DashScope (百炼 scene description): `DASHSCOPE_API_KEY` in `local.properties` → `BuildConfig.DASHSCOPE_API_KEY`. Never commit real keys; rotate if exposed. See `docs/scenedescription-plan.md` and `data/scenedescription/`.
+
+Moment cards: sampling auto-starts `MomentWorkflowService` (up to 5 parallel workflows, unique `workflowId`). Cards persist in Room; home `MapFragment` shows a half-screen BottomSheet list; detail in `MomentDetailFragment`. See `docs/moment-cards-home-plan.md`.
+
 ## Conventions
 
 - ViewModels expose `StateFlow<UiState>` and `SharedFlow<UiEvent>` via `BaseViewModel`.

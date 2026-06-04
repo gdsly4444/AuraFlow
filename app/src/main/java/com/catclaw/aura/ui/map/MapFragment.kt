@@ -1,80 +1,212 @@
 package com.catclaw.aura.ui.map
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
+import android.widget.Toast
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.catclaw.aura.MainActivity
 import com.catclaw.aura.R
-import com.catclaw.aura.data.network.NetworkClient
-import com.catclaw.aura.data.network.callback.HttpCallback
-import com.catclaw.aura.data.network.config.NetworkConstants
+import com.catclaw.aura.databinding.FragmentMapBinding
 import com.catclaw.aura.ui.base.BaseFragment
+import com.catclaw.aura.ui.moment.MomentCardListAdapter
+import com.catclaw.aura.ui.moment.MomentListItem
+import com.catclaw.aura.ui.moment.label
+import com.catclaw.aura.ui.util.ImmersiveInsets
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapInitOptions
 import com.mapbox.maps.MapView
 
 /**
- * Map screen. [MapViewModel] supplies camera config; [MapView] lifecycle is tied to this fragment.
+ * Home: globe map + draggable moment list bottom sheet.
  */
 class MapFragment : BaseFragment(R.layout.fragment_map) {
 
-    private val viewModel: MapViewModel by viewModels()
+    private var _binding: FragmentMapBinding? = null
+    private val binding get() = _binding!!
+
+    private val mapViewModel: MapViewModel by viewModels()
+    private val homeViewModel: HomeViewModel by viewModels(
+        factoryProducer = {
+            ViewModelProvider.AndroidViewModelFactory.getInstance(requireActivity().application)
+        },
+    )
+
     private var mapView: MapView? = null
+    private var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>? = null
+    private lateinit var listAdapter: MomentCardListAdapter
 
     override fun onBind(view: View, savedInstanceState: Bundle?) {
-        view.findViewById<View>(R.id.fab_ambient)?.setOnClickListener {
+        _binding = FragmentMapBinding.bind(view)
+        ImmersiveInsets.applyMargin(binding.layoutHomeGenerating, extraTopDp = 8)
+        ImmersiveInsets.applyMargin(binding.fabAmbient, extraBottomDp = 16, extraHorizontalDp = 16)
+        ImmersiveInsets.applyMargin(binding.buttonExpandMoments, extraTopDp = 8)
+        setupBottomSheet()
+        setupMomentList()
+        setupGeneratingBanner()
+        binding.fabAmbient.setOnClickListener {
             (requireActivity() as MainActivity).showAmbientCaptureFragment(addToBackStack = true)
         }
+        binding.buttonExpandMoments.setOnClickListener { expandMomentSheet() }
+        binding.momentSheetHeader.setOnClickListener { expandMomentSheet() }
+        binding.momentSheetDragHandle.setOnClickListener { expandMomentSheet() }
 
         if (savedInstanceState == null) {
-            viewModel.uiState.collectWithLifecycle { state ->
+            mapViewModel.uiState.collectWithLifecycle { state ->
                 if (mapView == null) {
                     mapView = createMapView(state)
-                    view.findViewById<FrameLayout>(R.id.map_container).addView(
+                    binding.mapContainer.addView(
                         mapView,
                         FrameLayout.LayoutParams.MATCH_PARENT,
                         FrameLayout.LayoutParams.MATCH_PARENT,
                     )
-                    viewModel.onMapReady()
+                    mapViewModel.onMapReady()
                 }
             }
         } else if (mapView == null) {
-            // MapView must be recreated after process death; state is restored via ViewModel defaults for now.
-            val state = viewModel.uiState.value
+            val state = mapViewModel.uiState.value
             mapView = createMapView(state)
-            view.findViewById<FrameLayout>(R.id.map_container).addView(
+            binding.mapContainer.addView(
                 mapView,
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
             )
         }
+    }
 
+    private fun setupBottomSheet() {
+        bottomSheetBehavior = BottomSheetBehavior.from(binding.momentBottomSheet).apply {
+            isFitToContents = false
+            halfExpandedRatio = 0.5f
+            skipCollapsed = false
+            isHideable = false
+            peekHeight = resources.getDimensionPixelSize(R.dimen.moment_sheet_peek_height)
+            state = BottomSheetBehavior.STATE_HALF_EXPANDED
+            addBottomSheetCallback(sheetCallback)
+        }
+        updateSheetUi(bottomSheetBehavior?.state ?: BottomSheetBehavior.STATE_HALF_EXPANDED)
+    }
 
-        NetworkClient.postJson(
-            baseUrlKey = NetworkConstants.BASE_URL_MAIN,
-            path = "posts",
-            bodyParams = mapOf(
-                "title" to "Aura test",
-                "body" to "hello network",
-                "userId" to 1,
-            ),
-            callback = object : HttpCallback {
-                override fun onSuccess(json: String) {
-                    Log.d("NetworkTest", json)
-                    // 会返回带 id 的假创建结果
-                }
-                override fun onFailed(exception: Exception) {
-                    Log.e("NetworkTest", "failed", exception)
+    private fun expandMomentSheet() {
+        bottomSheetBehavior?.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+    }
+
+    private val sheetCallback = object : BottomSheetCallback() {
+        override fun onStateChanged(bottomSheet: View, newState: Int) {
+            updateSheetUi(newState)
+        }
+
+        override fun onSlide(bottomSheet: View, slideOffset: Float) = Unit
+    }
+
+    /**
+     * Only [STATE_COLLAPSED] hides the list (peek bar). Dragging/settling keep the list
+     * visible so it does not flash away while the user moves the sheet.
+     */
+    private fun updateSheetUi(state: Int) {
+        val collapsed = state == BottomSheetBehavior.STATE_COLLAPSED
+        binding.momentSheetList.isVisible = !collapsed
+        binding.buttonExpandMoments.isVisible = collapsed
+    }
+
+    private fun setupGeneratingBanner() {
+        homeViewModel.generatingStatus.collectWithLifecycle { status ->
+            val visible = status != null
+            binding.layoutHomeGenerating.isVisible = visible
+            if (status == null) return@collectWithLifecycle
+            binding.textHomeGeneratingTitle.text = getString(
+                R.string.home_generating_banner_title,
+                status.activeCount,
+            )
+            binding.textHomeGeneratingPhase.text = getString(
+                R.string.home_generating_banner_phase,
+                status.primaryPhase.label(requireContext()),
+            )
+        }
+    }
+
+    private fun setupMomentList() {
+        listAdapter = MomentCardListAdapter(
+            onItemClick = { item ->
+                when (item) {
+                    is MomentListItem.Completed -> {
+                        (requireActivity() as MainActivity).showMomentDetailFragment(item.card.id)
+                    }
+                    is MomentListItem.InProgress -> Unit
                 }
             },
+            onItemLongClick = { item -> onMomentItemLongClick(item) },
         )
+        binding.recyclerMoments.layoutManager = LinearLayoutManager(requireContext())
+        binding.recyclerMoments.adapter = listAdapter
+
+        homeViewModel.listItems.collectWithLifecycle { items ->
+            listAdapter.submitList(items)
+            val inProgressCount = items.count { it is MomentListItem.InProgress }
+            binding.chipActiveCount.isVisible = inProgressCount > 0
+            if (inProgressCount > 0) {
+                binding.chipActiveCount.text = getString(
+                    R.string.moment_list_active_count,
+                    inProgressCount,
+                )
+            }
+            val showEmpty = items.isEmpty()
+            binding.textEmptyMoments.isVisible = showEmpty
+            binding.recyclerMoments.isVisible = !showEmpty
+        }
+    }
+
+    private fun onMomentItemLongClick(item: MomentListItem) {
+        when (item) {
+            is MomentListItem.InProgress -> {
+                Toast.makeText(
+                    requireContext(),
+                    R.string.moment_delete_in_progress,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            is MomentListItem.Completed -> {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.moment_delete_confirm_title)
+                    .setMessage(R.string.moment_delete_confirm_message)
+                    .setNegativeButton(R.string.moment_delete_confirm_negative, null)
+                    .setPositiveButton(R.string.moment_delete_confirm_positive) { _, _ ->
+                        homeViewModel.deleteCard(item.card.id)
+                        Toast.makeText(
+                            requireContext(),
+                            R.string.moment_delete_done,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                    .show()
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        mapView?.onStart()
+    }
+
+    override fun onStop() {
+        mapView?.onStop()
+        super.onStop()
     }
 
     override fun onDestroyView() {
+        bottomSheetBehavior?.removeBottomSheetCallback(sheetCallback)
+        mapView?.onDestroy()
         mapView = null
+        bottomSheetBehavior = null
+        _binding = null
         super.onDestroyView()
     }
 

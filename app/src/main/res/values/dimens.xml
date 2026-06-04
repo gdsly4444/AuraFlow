@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Drag handle + title row when sheet is collapsed -->
+    <dimen name="moment_sheet_peek_height">88dp</dimen>
+</resources>

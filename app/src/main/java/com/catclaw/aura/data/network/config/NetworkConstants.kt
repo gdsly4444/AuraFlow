@@ -10,6 +10,9 @@ object NetworkConstants {
     /** Default host for app APIs. Override URL in [AuraApplication]. */
     const val BASE_URL_MAIN = "main"
 
+    /** Alibaba Cloud DashScope OpenAI-compatible endpoint (百炼). */
+    const val BASE_URL_DASHSCOPE = "dashscope"
+
     /** Example secondary host (Mapbox REST, analytics, etc.). */
     const val BASE_URL_SECONDARY = "secondary"
 }

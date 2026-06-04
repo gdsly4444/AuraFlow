@@ -7,11 +7,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.catclaw.aura.data.ambient.AmbientCaptureCoordinator
+import com.catclaw.aura.data.moment.model.MomentCaptureSnapshot
+import com.catclaw.aura.service.moment.MomentWorkflowService
 import com.catclaw.aura.ui.base.BaseViewModel
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class AmbientCaptureViewModel(
-    application: Application,
+    private val application: Application,
 ) : BaseViewModel<AmbientCaptureUiState, AmbientCaptureUiEvent>(AmbientCaptureUiState()) {
 
     private val coordinator = AmbientCaptureCoordinator(application)
@@ -22,10 +25,28 @@ class AmbientCaptureViewModel(
     ) {
         if (uiState.value.isCapturing) return
         viewModelScope.launch {
-            updateState { it.copy(isCapturing = true, errorMessage = null) }
+            updateState {
+                it.copy(
+                    isCapturing = true,
+                    errorMessage = null,
+                    workflowId = null,
+                    workflowSubmitted = false,
+                )
+            }
             try {
                 val moment = coordinator.captureAll(lifecycleOwner, previewView)
-                updateState { it.copy(isCapturing = false, moment = moment) }
+                val workflowId = UUID.randomUUID().toString()
+                val snapshot = MomentCaptureSnapshot.from(moment, workflowId)
+                MomentWorkflowService.startWorkflow(application, snapshot)
+                updateState {
+                    it.copy(
+                        isCapturing = false,
+                        moment = moment,
+                        workflowId = workflowId,
+                        workflowSubmitted = true,
+                    )
+                }
+                sendEvent(AmbientCaptureUiEvent.ShowMessage("采样完成，正在后台生成卡片"))
             } catch (e: Exception) {
                 updateState {
                     it.copy(
