@@ -5,8 +5,9 @@ sdk.dir=/path/to/Android/Sdk
 # Mapbox public token (pk.) — injected into the app for map tiles
 MAPBOX_ACCESS_TOKEN=
 
-# Mapbox secret token (sk., Downloads:Read) — required for Gradle to download the Maps SDK
+# Mapbox secret token (sk., Downloads:Read) — required for Gradle to download Maps + Search SDK
 # https://docs.mapbox.com/android/maps/guides/install/
+# https://docs.mapbox.com/android/search/guides/install/
 MAPBOX_DOWNLOADS_TOKEN=
 
 # Alibaba Cloud DashScope (百炼) — https://help.aliyun.com/zh/model-studio/get-api-key

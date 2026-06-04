@@ -18,6 +18,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.catclaw.aura.R
 import com.catclaw.aura.data.ambient.capture.NotificationListenerAccess
 import com.catclaw.aura.data.ambient.AmbientCapturePortImpl
@@ -33,6 +34,9 @@ import com.mapbox.maps.MapView
 import java.io.File
 import java.util.Locale
 import kotlin.math.max
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * One-tap ambient sampling: short video, audio (≤5s), now-playing probe, location + Mapbox preview.
@@ -53,6 +57,7 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
     private var locationMapView: MapView? = null
     private var audioMediaPlayer: MediaPlayer? = null
     private var lastAudioPlaybackUri: Uri? = null
+    private var lastRenderedCaptureAt: Long? = null
     private val audioProgressHandler = Handler(Looper.getMainLooper())
     private val audioProgressRunnable = object : Runnable {
         override fun run() {
@@ -95,6 +100,7 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
             binding.cameraPreview.isVisible = state.isCapturing
             binding.buttonCapture.isEnabled = !state.isCapturing
             if (state.isCapturing) {
+                lastRenderedCaptureAt = null
                 stopAudioPlayback()
             }
             binding.textError.isVisible = state.errorMessage != null
@@ -127,6 +133,8 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
     }
 
     private fun renderMoment(moment: AmbientMoment) {
+        if (lastRenderedCaptureAt == moment.capturedAtEpochMs) return
+        lastRenderedCaptureAt = moment.capturedAtEpochMs
         renderVideo(moment)
         renderAudio(moment)
         renderMusic(moment)
@@ -247,21 +255,47 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
             return
         }
         if (player == null) {
-            audioMediaPlayer = MediaPlayer().apply {
-                setDataSource(requireContext(), playbackUri)
-                prepare()
-                setOnCompletionListener {
-                    binding.seekbarAudio.progress = binding.seekbarAudio.max
-                    binding.buttonAudioPlay.text = getString(R.string.ambient_audio_play)
-                    audioProgressHandler.removeCallbacks(audioProgressRunnable)
-                    binding.textAudioTime.text = formatAudioTime(
-                        binding.seekbarAudio.max,
-                        binding.seekbarAudio.max,
-                    )
+            binding.buttonAudioPlay.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                val prepared = withContext(Dispatchers.IO) {
+                    runCatching {
+                        MediaPlayer().apply {
+                            setDataSource(requireContext(), playbackUri)
+                            prepare()
+                            setOnCompletionListener {
+                                binding.seekbarAudio.progress = binding.seekbarAudio.max
+                                binding.buttonAudioPlay.text = getString(R.string.ambient_audio_play)
+                                audioProgressHandler.removeCallbacks(audioProgressRunnable)
+                                binding.textAudioTime.text = formatAudioTime(
+                                    binding.seekbarAudio.max,
+                                    binding.seekbarAudio.max,
+                                )
+                            }
+                        }
+                    }
                 }
+                binding.buttonAudioPlay.isEnabled = true
+                if (!isAdded) return@launch
+                prepared.onSuccess { audioMediaPlayer = it }
+                prepared.onFailure { error ->
+                    Toast.makeText(
+                        requireContext(),
+                        getString(
+                            R.string.ambient_audio_failed,
+                            error.message ?: "playback",
+                        ),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    return@launch
+                }
+                audioMediaPlayer?.start()
+                binding.buttonAudioPlay.text = getString(R.string.ambient_audio_pause)
+                audioProgressHandler.removeCallbacks(audioProgressRunnable)
+                audioProgressHandler.post(audioProgressRunnable)
             }
+            return
         }
-        audioMediaPlayer?.start()
+        player.start()
         binding.buttonAudioPlay.text = getString(R.string.ambient_audio_pause)
         audioProgressHandler.removeCallbacks(audioProgressRunnable)
         audioProgressHandler.post(audioProgressRunnable)
@@ -398,34 +432,42 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
     }
 
     private fun showLocationOnMap(latitude: Double, longitude: Double) {
-        val host = binding.mapPreviewHost
-        if (locationMapView == null) {
-            locationMapView = MapView(
-                requireContext(),
-                MapInitOptions(
-                    context = requireContext(),
-                    cameraOptions = CameraOptions.Builder()
+        binding.mapPreviewHost.post {
+            if (!isAdded || _binding == null) return@post
+            val host = binding.mapPreviewHost
+            if (locationMapView == null) {
+                locationMapView = MapView(
+                    requireContext(),
+                    MapInitOptions(
+                        context = requireContext(),
+                        cameraOptions = CameraOptions.Builder()
+                            .center(Point.fromLngLat(longitude, latitude))
+                            .zoom(15.0)
+                            .pitch(0.0)
+                            .bearing(0.0)
+                            .build(),
+                    ),
+                )
+                host.addView(
+                    locationMapView,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                )
+                if (viewLifecycleOwner.lifecycle.currentState.isAtLeast(
+                        androidx.lifecycle.Lifecycle.State.STARTED,
+                    )
+                ) {
+                    locationMapView?.onStart()
+                }
+            } else {
+                locationMapView?.mapboxMap?.setCamera(
+                    CameraOptions.Builder()
                         .center(Point.fromLngLat(longitude, latitude))
                         .zoom(15.0)
-                        .pitch(0.0)
-                        .bearing(0.0)
                         .build(),
-                ),
-            )
-            host.addView(
-                locationMapView,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            )
-        } else {
-            locationMapView?.mapboxMap?.setCamera(
-                CameraOptions.Builder()
-                    .center(Point.fromLngLat(longitude, latitude))
-                    .zoom(15.0)
-                    .build(),
-            )
+                )
+            }
         }
-        locationMapView?.onStart()
     }
 
     private fun clearMapPreview() {
@@ -439,6 +481,7 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
         "poi" -> getString(R.string.ambient_location_place_type_poi)
         "address" -> getString(R.string.ambient_location_place_type_address)
         "street" -> getString(R.string.ambient_location_place_type_street)
+        "admin" -> getString(R.string.ambient_location_place_type_admin)
         else -> null
     }
 

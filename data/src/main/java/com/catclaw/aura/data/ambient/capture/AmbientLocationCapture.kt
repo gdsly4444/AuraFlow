@@ -1,6 +1,7 @@
 package com.catclaw.aura.data.ambient.capture
 
 import android.content.Context
+import android.util.Log
 import com.catclaw.aura.domain.model.LocationSnapshot
 import com.mapbox.common.location.AccuracyLevel
 import com.mapbox.common.location.DeviceLocationProvider
@@ -19,60 +20,45 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
 /**
- * Single fix via Mapbox [LocationService] (Android GPS/Network provider).
- * Does not use Google Play Services; aligns with [com.mapbox.maps:android-ndk27] GMS exclusion.
+ * Single fix via Mapbox [LocationService], then reverse geocoding on a background thread.
  */
 class AmbientLocationCapture(
-    @Suppress("UNUSED_PARAMETER") context: Context,
+    context: Context,
 ) {
 
-    private val reverseGeocoding = MapboxReverseGeocoding()
+    private val reverseGeocoding = MapboxReverseGeocoding(context)
 
-    suspend fun capture(): LocationSnapshot? = withContext(Dispatchers.Main) {
-        try {
-            val location = captureWithMapbox(timeoutMs = 15_000L)
-            if (location != null) {
-                val fix = LocationSnapshot(
-                    latitude = location.latitude,
-                    longitude = location.longitude,
-                    accuracyMeters = location.horizontalAccuracy?.toFloat(),
-                    provider = location.source ?: PROVIDER_LABEL,
-                )
-                enrichWithAddress(fix)
-            } else {
-                LocationSnapshot(
-                    latitude = 0.0,
-                    longitude = 0.0,
-                    accuracyMeters = null,
-                    provider = null,
-                    errorMessage = "无法获取当前位置",
-                )
+    suspend fun capture(): LocationSnapshot? {
+        val fix = withContext(Dispatchers.Main) {
+            try {
+                captureGpsFix()
+            } catch (e: TimeoutCancellationException) {
+                null to "定位超时"
+            } catch (e: SecurityException) {
+                null to "缺少定位权限"
+            } catch (e: Exception) {
+                null to (e.message ?: "定位失败")
             }
-        } catch (e: TimeoutCancellationException) {
-            LocationSnapshot(
-                latitude = 0.0,
-                longitude = 0.0,
-                accuracyMeters = null,
-                provider = null,
-                errorMessage = "定位超时",
-            )
-        } catch (e: SecurityException) {
-            LocationSnapshot(
-                latitude = 0.0,
-                longitude = 0.0,
-                accuracyMeters = null,
-                provider = null,
-                errorMessage = "缺少定位权限",
-            )
-        } catch (e: Exception) {
-            LocationSnapshot(
-                latitude = 0.0,
-                longitude = 0.0,
-                accuracyMeters = null,
-                provider = null,
-                errorMessage = e.message ?: "定位失败",
-            )
         }
+        return when (val snapshot = fix.first) {
+            null -> failureSnapshot(fix.second ?: "无法获取当前位置")
+            else -> withContext(Dispatchers.IO) { enrichWithAddress(snapshot) }
+        }
+    }
+
+    private suspend fun captureGpsFix(): Pair<LocationSnapshot?, String?> {
+        val location = captureWithMapbox(timeoutMs = 8_000L) ?: return null to null
+        val fix = LocationSnapshot(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            accuracyMeters = location.horizontalAccuracy?.toFloat(),
+            provider = location.source ?: PROVIDER_LABEL,
+        )
+        Log.i(
+            TAG,
+            "GPS fix lat=${fix.latitude}, lon=${fix.longitude}, accuracy=${fix.accuracyMeters}m",
+        )
+        return fix to null
     }
 
     private suspend fun captureWithMapbox(timeoutMs: Long): Location? {
@@ -141,7 +127,17 @@ class AmbientLocationCapture(
         )
     }
 
+    private fun failureSnapshot(message: String): LocationSnapshot =
+        LocationSnapshot(
+            latitude = 0.0,
+            longitude = 0.0,
+            accuracyMeters = null,
+            provider = null,
+            errorMessage = message,
+        )
+
     private companion object {
+        const val TAG = "AmbientLocationCapture"
         const val PROVIDER_LABEL = "mapbox-android"
     }
 }

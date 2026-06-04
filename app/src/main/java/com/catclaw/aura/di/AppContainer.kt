@@ -27,72 +27,102 @@ import com.catclaw.aura.domain.usecase.ObserveHomeListUseCase
 import com.catclaw.aura.domain.usecase.StartMomentWorkflowUseCase
 
 /**
- * Manual composition root (Hilt is incompatible with this project's AGP 9 setup).
+ * Manual composition root. Heavy dependencies are lazy; [warmUp] preloads Room on a background thread.
  */
 class AppContainer(context: Context) {
 
     private val appContext = context.applicationContext
 
-    val momentCardRepository: MomentCardRepository
-    val momentWorkflowRepository: MomentWorkflowRepository
+    val workflowStore: MomentWorkflowStore = MomentWorkflowStore()
+
+    val momentCardRepository: MomentCardRepository by lazy {
+        MomentCardRepositoryImpl(database.momentCardDao(), mediaArchiver)
+    }
+
+    val momentWorkflowRepository: MomentWorkflowRepository by lazy {
+        MomentWorkflowRepositoryImpl(appContext, workflowEngine, workflowStore)
+    }
+
+    val ambientCapturePortImpl: AmbientCapturePortImpl by lazy {
+        AmbientCapturePortImpl(captureCoordinator)
+    }
+
     val ambientCapturePort: AmbientCapturePort
-    val ambientCapturePortImpl: AmbientCapturePortImpl
-    val observeHomeListUseCase: ObserveHomeListUseCase
-    val observeGeneratingStatusUseCase: ObserveGeneratingStatusUseCase
-    val deleteMomentCardUseCase: DeleteMomentCardUseCase
-    val getMomentCardUseCase: GetMomentCardUseCase
-    val captureAmbientMomentUseCase: CaptureAmbientMomentUseCase
+        get() = ambientCapturePortImpl
 
-    val workflowEngine: MomentWorkflowEngine
-    val workflowStore: MomentWorkflowStore
+    val observeHomeListUseCase: ObserveHomeListUseCase by lazy {
+        ObserveHomeListUseCase(momentCardRepository, momentWorkflowRepository)
+    }
 
-    init {
-        NetworkClient.init(
-            NetworkConfig(
-                baseUrls = mapOf(
-                    NetworkConstants.BASE_URL_MAIN to "https://jsonplaceholder.typicode.com/",
-                    NetworkConstants.BASE_URL_SECONDARY to "https://jsonplaceholder.typicode.com/",
-                    NetworkConstants.BASE_URL_DASHSCOPE to
-                        "https://dashscope.aliyuncs.com/compatible-mode/v1/",
-                    NetworkConstants.BASE_URL_MAPBOX_API to "https://api.mapbox.com/",
-                ),
-                commonHeaders = mapOf("Accept" to "application/json"),
-                enableLogging = com.catclaw.aura.data.BuildConfig.DEBUG,
-            ),
-        )
+    val observeGeneratingStatusUseCase: ObserveGeneratingStatusUseCase by lazy {
+        ObserveGeneratingStatusUseCase(momentWorkflowRepository)
+    }
 
-        val database = AuraDatabase.get(appContext)
-        val archiver = MomentMediaArchiver(appContext)
-        momentCardRepository = MomentCardRepositoryImpl(database.momentCardDao(), archiver)
+    val deleteMomentCardUseCase: DeleteMomentCardUseCase by lazy {
+        DeleteMomentCardUseCase(momentCardRepository)
+    }
 
-        workflowStore = MomentWorkflowStore()
-        val notificationScheduler = WorkflowNotificationScheduler(appContext, workflowStore)
-        val sceneDescriptionConfig = SceneDescriptionConfig()
-        val sceneDescriptionRepository = SceneDescriptionRepository(appContext, sceneDescriptionConfig)
-        workflowEngine = MomentWorkflowEngine(
+    val getMomentCardUseCase: GetMomentCardUseCase by lazy {
+        GetMomentCardUseCase(momentCardRepository)
+    }
+
+    val captureAmbientMomentUseCase: CaptureAmbientMomentUseCase by lazy {
+        CaptureAmbientMomentUseCase(ambientCapturePort, startMomentWorkflowUseCase)
+    }
+
+    val workflowEngine: MomentWorkflowEngine by lazy {
+        ensureNetworkInitialized()
+        MomentWorkflowEngine(
             appContext,
             workflowStore,
             momentCardRepository,
-            sceneDescriptionRepository,
-            notificationScheduler,
-        )
-        momentWorkflowRepository = MomentWorkflowRepositoryImpl(
-            appContext,
-            workflowEngine,
-            workflowStore,
-        )
-        WorkflowRuntime.engine = workflowEngine
+            SceneDescriptionRepository(appContext, SceneDescriptionConfig()),
+            WorkflowNotificationScheduler(appContext, workflowStore),
+        ).also { WorkflowRuntime.engine = it }
+    }
+
+    private val startMomentWorkflowUseCase: StartMomentWorkflowUseCase by lazy {
+        StartMomentWorkflowUseCase(momentWorkflowRepository)
+    }
+
+    private val database: AuraDatabase by lazy {
+        AuraDatabase.get(appContext)
+    }
+
+    private val mediaArchiver: MomentMediaArchiver by lazy {
+        MomentMediaArchiver(appContext)
+    }
+
+    private val captureCoordinator: AmbientCaptureCoordinator by lazy {
+        AmbientCaptureCoordinator(appContext)
+    }
+
+    init {
         WorkflowRuntime.store = workflowStore
+    }
 
-        val captureCoordinator = AmbientCaptureCoordinator(appContext)
-        ambientCapturePortImpl = AmbientCapturePortImpl(captureCoordinator)
-        ambientCapturePort = ambientCapturePortImpl
+    /** Opens Room and touches the card repository — call from a background thread at startup. */
+    fun warmUp() {
+        momentCardRepository
+    }
 
-        val startWorkflow = StartMomentWorkflowUseCase(momentWorkflowRepository)
-        observeHomeListUseCase = ObserveHomeListUseCase(momentCardRepository, momentWorkflowRepository)
-        observeGeneratingStatusUseCase = ObserveGeneratingStatusUseCase(momentWorkflowRepository)
-        deleteMomentCardUseCase = DeleteMomentCardUseCase(momentCardRepository)
-        getMomentCardUseCase = GetMomentCardUseCase(momentCardRepository)
-        captureAmbientMomentUseCase = CaptureAmbientMomentUseCase(ambientCapturePort, startWorkflow)
+    private fun ensureNetworkInitialized() {
+        if (NetworkClient.isInitialized) return
+        synchronized(NetworkClient::class.java) {
+            if (NetworkClient.isInitialized) return
+            NetworkClient.init(
+                NetworkConfig(
+                    baseUrls = mapOf(
+                        NetworkConstants.BASE_URL_MAIN to "https://jsonplaceholder.typicode.com/",
+                        NetworkConstants.BASE_URL_SECONDARY to "https://jsonplaceholder.typicode.com/",
+                        NetworkConstants.BASE_URL_DASHSCOPE to
+                            "https://dashscope.aliyuncs.com/compatible-mode/v1/",
+                        NetworkConstants.BASE_URL_MAPBOX_API to "https://api.mapbox.com/",
+                    ),
+                    commonHeaders = mapOf("Accept" to "application/json"),
+                    enableLogging = com.catclaw.aura.data.BuildConfig.DEBUG,
+                ),
+            )
+        }
     }
 }

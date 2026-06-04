@@ -29,6 +29,7 @@
     <string name="ambient_location_place_type_poi">兴趣点 POI</string>
     <string name="ambient_location_place_type_address">门牌地址</string>
     <string name="ambient_location_place_type_street">街道</string>
+    <string name="ambient_location_place_type_admin">大致区域</string>
     <string name="ambient_geocoding_failed">地址解析失败：%1$s</string>
     <string name="ambient_location_failed">定位失败：%1$s</string>
     <string name="ambient_section_scene_description">AI 场景描述（百炼）</string>

@@ -52,4 +52,5 @@ dependencies {
     implementation('com.mapbox.maps:android-ndk27:11.24.3') {
         exclude group: 'com.google.android.gms'
     }
+    implementation libs.mapbox.search.android.ndk27
 }

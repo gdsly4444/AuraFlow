@@ -28,6 +28,8 @@ import com.mapbox.maps.MapView
 
 /**
  * Home: globe map + draggable moment list bottom sheet.
+ *
+ * MapView is attached on the next frame so the first layout stays light.
  */
 class MapFragment : BaseFragment(R.layout.fragment_map) {
 
@@ -43,6 +45,7 @@ class MapFragment : BaseFragment(R.layout.fragment_map) {
     }
 
     private var mapView: MapView? = null
+    private var mapAttachScheduled = false
     private var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>? = null
     private lateinit var listAdapter: MomentCardListAdapter
 
@@ -61,26 +64,34 @@ class MapFragment : BaseFragment(R.layout.fragment_map) {
         binding.momentSheetHeader.setOnClickListener { expandMomentSheet() }
         binding.momentSheetDragHandle.setOnClickListener { expandMomentSheet() }
 
-        if (savedInstanceState == null) {
-            mapViewModel.uiState.collectWithLifecycle { state ->
-                if (mapView == null) {
-                    mapView = createMapView(state)
-                    binding.mapContainer.addView(
-                        mapView,
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                    )
-                    mapViewModel.onMapReady()
-                }
-            }
-        } else if (mapView == null) {
-            val state = mapViewModel.uiState.value
-            mapView = createMapView(state)
+        scheduleMapAttach()
+    }
+
+    private fun scheduleMapAttach() {
+        if (mapView != null || mapAttachScheduled) return
+        mapAttachScheduled = true
+        binding.mapContainer.post {
+            mapAttachScheduled = false
+            if (!isAdded || _binding == null || mapView != null) return@post
+            attachMapView()
+        }
+    }
+
+    private fun attachMapView() {
+        val state = mapViewModel.uiState.value
+        mapView = createMapView(state).also { map ->
             binding.mapContainer.addView(
-                mapView,
+                map,
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
             )
+        }
+        mapViewModel.onMapReady()
+        if (viewLifecycleOwner.lifecycle.currentState.isAtLeast(
+                androidx.lifecycle.Lifecycle.State.STARTED,
+            )
+        ) {
+            mapView?.onStart()
         }
     }
 
@@ -91,10 +102,11 @@ class MapFragment : BaseFragment(R.layout.fragment_map) {
             skipCollapsed = false
             isHideable = false
             peekHeight = resources.getDimensionPixelSize(R.dimen.moment_sheet_peek_height)
-            state = BottomSheetBehavior.STATE_HALF_EXPANDED
+            // Collapsed first — avoids heavy half-expanded measure on cold start.
+            state = BottomSheetBehavior.STATE_COLLAPSED
             addBottomSheetCallback(sheetCallback)
         }
-        updateSheetUi(bottomSheetBehavior?.state ?: BottomSheetBehavior.STATE_HALF_EXPANDED)
+        updateSheetUi(BottomSheetBehavior.STATE_COLLAPSED)
     }
 
     private fun expandMomentSheet() {
@@ -109,10 +121,6 @@ class MapFragment : BaseFragment(R.layout.fragment_map) {
         override fun onSlide(bottomSheet: View, slideOffset: Float) = Unit
     }
 
-    /**
-     * Only [STATE_COLLAPSED] hides the list (peek bar). Dragging/settling keep the list
-     * visible so it does not flash away while the user moves the sheet.
-     */
     private fun updateSheetUi(state: Int) {
         val collapsed = state == BottomSheetBehavior.STATE_COLLAPSED
         binding.momentSheetList.isVisible = !collapsed
@@ -147,8 +155,12 @@ class MapFragment : BaseFragment(R.layout.fragment_map) {
             },
             onItemLongClick = { item -> onMomentItemLongClick(item) },
         )
-        binding.recyclerMoments.layoutManager = LinearLayoutManager(requireContext())
-        binding.recyclerMoments.adapter = listAdapter
+        binding.recyclerMoments.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = listAdapter
+            setHasFixedSize(true)
+            itemAnimator = null
+        }
 
         homeViewModel.listItems.collectWithLifecycle { items ->
             listAdapter.submitList(items)
@@ -207,6 +219,7 @@ class MapFragment : BaseFragment(R.layout.fragment_map) {
         bottomSheetBehavior?.removeBottomSheetCallback(sheetCallback)
         mapView?.onDestroy()
         mapView = null
+        mapAttachScheduled = false
         bottomSheetBehavior = null
         _binding = null
         super.onDestroyView()

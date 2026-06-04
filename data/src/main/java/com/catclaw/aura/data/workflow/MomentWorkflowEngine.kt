@@ -16,11 +16,13 @@ import com.catclaw.aura.domain.model.WorkflowPhase
 import com.catclaw.aura.domain.repository.MomentCardRepository
 import com.catclaw.aura.data.moment.ArchivedMomentMedia
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MomentWorkflowEngine(
     context: Context,
@@ -33,18 +35,10 @@ class MomentWorkflowEngine(
     private val archiver = MomentMediaArchiver(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val workChannel = Channel<MomentCaptureSnapshot>(Channel.UNLIMITED)
-
-    init {
-        repeat(MAX_CONCURRENT) {
-            scope.launch {
-                for (snapshot in workChannel) {
-                    runWorkflow(snapshot)
-                }
-            }
-        }
-    }
+    private val workersStarted = AtomicBoolean(false)
 
     fun enqueue(snapshot: MomentCaptureSnapshot) {
+        ensureWorkersStarted()
         store.upsert(
             ActiveWorkflow(
                 workflowId = snapshot.workflowId,
@@ -56,11 +50,22 @@ class MomentWorkflowEngine(
         workChannel.trySend(snapshot)
     }
 
+    private fun ensureWorkersStarted() {
+        if (!workersStarted.compareAndSet(false, true)) return
+        repeat(MAX_CONCURRENT) {
+            scope.launch {
+                for (snapshot in workChannel) {
+                    runWorkflow(snapshot)
+                }
+            }
+        }
+    }
+
     private suspend fun runWorkflow(snapshot: MomentCaptureSnapshot) {
         var archived: ArchivedMomentMedia? = null
         try {
             updatePhase(snapshot, WorkflowPhase.ARCHIVING_MEDIA)
-            archived = archiver.archive(snapshot)
+            archived = withContext(Dispatchers.IO) { archiver.archive(snapshot) }
             updatePhase(
                 snapshot,
                 WorkflowPhase.GENERATING_DESCRIPTION,
@@ -97,7 +102,9 @@ class MomentWorkflowEngine(
             notificationScheduler.onActivityChanged()
         } catch (e: Exception) {
             if (archived == null) {
-                archived = runCatching { archiver.archive(snapshot) }.getOrNull()
+                archived = runCatching {
+                    withContext(Dispatchers.IO) { archiver.archive(snapshot) }
+                }.getOrNull()
             }
             cardRepository.save(
                 MomentCard(
@@ -185,6 +192,7 @@ class MomentWorkflowEngine(
     }
 
     companion object {
-        const val MAX_CONCURRENT = 5
+        /** Limit parallel AI encode + network to reduce jank on mid-range devices. */
+        const val MAX_CONCURRENT = 2
     }
 }

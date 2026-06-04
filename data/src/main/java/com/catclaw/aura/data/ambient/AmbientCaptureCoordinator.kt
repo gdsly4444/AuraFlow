@@ -8,11 +8,14 @@ import com.catclaw.aura.data.ambient.capture.AmbientLocationCapture
 import com.catclaw.aura.data.ambient.capture.AmbientNowPlayingProbe
 import com.catclaw.aura.data.ambient.capture.AmbientVideoCapture
 import com.catclaw.aura.domain.model.AmbientMoment
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 /**
  * Orchestrates parallel ambient capture modules when the user triggers sampling.
+ *
+ * Video stays on [Dispatchers.Main] (CameraX); audio/location run on [Dispatchers.IO].
  */
 class AmbientCaptureCoordinator(
     context: Context,
@@ -28,14 +31,13 @@ class AmbientCaptureCoordinator(
         previewView: PreviewView,
     ): AmbientMoment = coroutineScope {
         val capturedAt = System.currentTimeMillis()
-        // Probe before mic/video so recording is less likely to disturb playback metadata.
         val nowPlaying = nowPlayingProbe.probe()
 
-        val videoDeferred = async {
+        val videoDeferred = async(Dispatchers.Main.immediate) {
             videoCapture.capture(lifecycleOwner, previewView)
         }
-        val audioDeferred = async { audioCapture.capture() }
-        val locationDeferred = async { locationCapture.capture() }
+        val audioDeferred = async(Dispatchers.IO) { audioCapture.capture() }
+        val locationDeferred = async(Dispatchers.IO) { locationCapture.capture() }
 
         AmbientMoment(
             capturedAtEpochMs = capturedAt,

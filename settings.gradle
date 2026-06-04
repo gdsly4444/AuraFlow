@@ -17,7 +17,7 @@ plugins {
 }
 
 def loadMapboxDownloadsToken() {
-    def fromEnv = System.getenv("MAPBOX_ACCESS_TOKEN")
+    def fromEnv = System.getenv("MAPBOX_DOWNLOADS_TOKEN")
     if (fromEnv != null && !fromEnv.trim().isEmpty()) {
         return fromEnv.trim()
     }
@@ -25,16 +25,26 @@ def loadMapboxDownloadsToken() {
     if (localFile.exists()) {
         def props = new Properties()
         localFile.withInputStream { props.load(it) }
-        def fromLocal = props.getProperty("MAPBOX_ACCESS_TOKEN", "").trim()
+        def fromLocal = props.getProperty("MAPBOX_DOWNLOADS_TOKEN", "").trim()
         if (!fromLocal.isEmpty()) {
             return fromLocal
+        }
+    }
+    def gradleUserHome = System.getenv("GRADLE_USER_HOME") ?: "${System.properties['user.home']}/.gradle"
+    def globalGradleProps = new File(gradleUserHome, "gradle.properties")
+    if (globalGradleProps.exists()) {
+        def props = new Properties()
+        globalGradleProps.withInputStream { props.load(it) }
+        def fromGlobal = props.getProperty("MAPBOX_DOWNLOADS_TOKEN", "").trim()
+        if (!fromGlobal.isEmpty()) {
+            return fromGlobal
         }
     }
     def gradlePropsFile = new File(settingsDir, "gradle.properties")
     if (gradlePropsFile.exists()) {
         def props = new Properties()
         gradlePropsFile.withInputStream { props.load(it) }
-        def fromGradle = props.getProperty("MAPBOX_ACCESS_TOKEN", "").trim()
+        def fromGradle = props.getProperty("MAPBOX_DOWNLOADS_TOKEN", "").trim()
         if (!fromGradle.isEmpty()) {
             return fromGradle
         }
@@ -45,10 +55,12 @@ def loadMapboxDownloadsToken() {
 def mapboxDownloadsToken = loadMapboxDownloadsToken()
 if (mapboxDownloadsToken.isEmpty()) {
     logger.lifecycle(
-        "MAPBOX_DOWNLOADS_TOKEN is not set. Mapbox SDK (com.mapbox.maps) may fail to download. " +
+        "MAPBOX_DOWNLOADS_TOKEN is not set. Mapbox SDKs may fail to download. " +
         "Create a secret token with Downloads:Read at https://account.mapbox.com/access-tokens/ " +
-        "and add MAPBOX_DOWNLOADS_TOKEN=sk.... to local.properties (no quotes)."
+        "and add MAPBOX_DOWNLOADS_TOKEN=sk.... to local.properties or ~/.gradle/gradle.properties (no quotes)."
     )
+} else {
+    logger.lifecycle("Mapbox Maven: MAPBOX_DOWNLOADS_TOKEN loaded for dependency downloads.")
 }
 
 dependencyResolutionManagement {
