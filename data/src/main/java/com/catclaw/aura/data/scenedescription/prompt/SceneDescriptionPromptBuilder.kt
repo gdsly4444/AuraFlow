@@ -17,8 +17,8 @@ class SceneDescriptionPromptBuilder(
         media: EncodedSceneMediaSet,
     ): String {
         val userContent = JSONArray().apply {
-            put(textPart(buildMetadataText(payload, media)))
             media.selected?.let { put(mediaPart(it)) }
+            put(textPart(buildMetadataText(payload, media)))
         }
         val messages = JSONArray().apply {
             put(
@@ -54,7 +54,11 @@ class SceneDescriptionPromptBuilder(
     ): String {
         val loc = payload.location
         val locationLine = if (loc != null && loc.errorMessage == null) {
-            "lat=${loc.latitude}, lon=${loc.longitude}, accuracy_m=${loc.accuracyMeters}"
+            buildString {
+                append("lat=${loc.latitude}, lon=${loc.longitude}, accuracy_m=${loc.accuracyMeters}")
+                loc.placeName?.let { append(", place=$it") }
+                loc.placeFeatureType?.let { append(", place_type=$it") }
+            }
         } else {
             "unknown"
         }
@@ -73,8 +77,15 @@ class SceneDescriptionPromptBuilder(
             add("audio_uri_available=${payload.audio.isSuccess}")
             addAll(media.skippedNotes)
         }
+        val attachmentHint = when (media.selected?.kind) {
+            EncodedMediaKind.VIDEO -> "请优先根据附带的短视频画面理解场景（约 ${payload.video.durationMs}ms），再结合下方元数据。"
+            EncodedMediaKind.POSTER -> "请根据附带的封面静帧与元数据理解场景。"
+            EncodedMediaKind.AUDIO -> "请根据附带的音频与元数据理解场景。"
+            null -> "未附带多媒体文件，仅根据元数据描述；缺失项写「未知」。"
+        }
         return """
-            |以下是同一次「环境瞬间」采样的结构化元数据（JSON 文本块）。请结合附带的图片/视频/音频（若有）写一段中文场景描述。
+            |$attachmentHint
+            |以下是同一次「环境瞬间」采样的结构化元数据。
             |captured_at_ms=${payload.capturedAtEpochMs}
             |location=$locationLine
             |now_playing_active=${music.isMusicActive}
@@ -144,7 +155,8 @@ class SceneDescriptionPromptBuilder(
 
     companion object {
         private const val SYSTEM_PROMPT =
-            "你是环境瞬间采样助手。根据用户提供的元数据与多模态附件，用简洁中文描述当前场景氛围（约 80～%d 字）。" +
+            "你是环境瞬间采样助手。若用户提供了短视频，必须以视频画面为主要依据描述场景动态与氛围；" +
+                "静帧或音频仅为补充。结合元数据用简洁中文输出（约 80～%d 字）。" +
                 "不得编造未提供的信息；缺失项写「未知」。不要输出 JSON 或列表，只输出一段描述正文。"
     }
 }

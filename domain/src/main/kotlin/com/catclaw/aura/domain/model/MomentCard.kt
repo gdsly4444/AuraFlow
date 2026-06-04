@@ -18,6 +18,7 @@ data class MomentCard(
     val longitude: Double?,
     val locationAccuracyMeters: Float?,
     val locationProvider: String?,
+    val locationPlaceName: String?,
     val sceneDescription: String?,
     val sceneDescriptionError: String?,
     val captureErrorSummary: String?,

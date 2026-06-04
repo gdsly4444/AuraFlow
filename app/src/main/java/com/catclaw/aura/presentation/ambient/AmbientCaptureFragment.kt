@@ -362,13 +362,38 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
             return
         }
 
-        binding.textLocationStatus.text = getString(
-            R.string.ambient_location_ok,
-            location.latitude,
-            location.longitude,
-            location.accuracyMeters ?: 0f,
-            location.provider ?: "mapbox",
-        )
+        binding.textLocationStatus.text = when {
+            !location.placeName.isNullOrBlank() -> {
+                val typeLabel = location.placeFeatureType?.let { featureTypeLabel(it) }
+                val placeLine = if (typeLabel != null) {
+                    "$typeLabel · ${location.placeName}"
+                } else {
+                    location.placeName!!
+                }
+                getString(
+                    R.string.ambient_location_with_place,
+                    placeLine,
+                    location.latitude,
+                    location.longitude,
+                    location.accuracyMeters ?: 0f,
+                    location.provider ?: "mapbox",
+                )
+            }
+            !location.geocodingError.isNullOrBlank() -> getString(
+                R.string.ambient_location_ok,
+                location.latitude,
+                location.longitude,
+                location.accuracyMeters ?: 0f,
+                location.provider ?: "mapbox",
+            ) + "\n" + getString(R.string.ambient_geocoding_failed, location.geocodingError)
+            else -> getString(
+                R.string.ambient_location_ok,
+                location.latitude,
+                location.longitude,
+                location.accuracyMeters ?: 0f,
+                location.provider ?: "mapbox",
+            )
+        }
         showLocationOnMap(location.latitude, location.longitude)
     }
 
@@ -408,6 +433,13 @@ class AmbientCaptureFragment : BaseFragment(R.layout.fragment_ambient_capture) {
         locationMapView?.onDestroy()
         binding.mapPreviewHost.removeAllViews()
         locationMapView = null
+    }
+
+    private fun featureTypeLabel(featureType: String): String? = when (featureType) {
+        "poi" -> getString(R.string.ambient_location_place_type_poi)
+        "address" -> getString(R.string.ambient_location_place_type_address)
+        "street" -> getString(R.string.ambient_location_place_type_street)
+        else -> null
     }
 
     private fun hasAllPermissions(): Boolean =

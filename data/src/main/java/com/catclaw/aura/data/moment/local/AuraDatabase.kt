@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [MomentCardEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class AuraDatabase : RoomDatabase() {
@@ -24,7 +24,10 @@ abstract class AuraDatabase : RoomDatabase() {
                     context.applicationContext,
                     AuraDatabase::class.java,
                     "aura.db",
-                ).build().also { instance = it }
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { instance = it }
             }
     }
 }

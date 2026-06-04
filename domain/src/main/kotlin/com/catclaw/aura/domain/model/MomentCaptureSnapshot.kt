@@ -22,6 +22,7 @@ data class MomentCaptureSnapshot(
     val longitude: Double?,
     val locationAccuracyMeters: Float?,
     val locationProvider: String?,
+    val locationPlaceName: String?,
     val locationError: String?,
 ) : Serializable {
 
@@ -57,6 +58,7 @@ data class MomentCaptureSnapshot(
                 longitude = location?.longitude,
                 locationAccuracyMeters = location?.accuracyMeters,
                 locationProvider = location?.provider,
+                locationPlaceName = location?.placeName,
                 locationError = location?.errorMessage,
             )
         }

@@ -23,6 +23,8 @@ object AmbientMomentPayloadMapper {
                     longitude = it.longitude,
                     accuracyMeters = it.accuracyMeters,
                     provider = it.provider,
+                    placeName = it.placeName,
+                    placeFeatureType = it.placeFeatureType,
                     errorMessage = it.errorMessage,
                 )
             },

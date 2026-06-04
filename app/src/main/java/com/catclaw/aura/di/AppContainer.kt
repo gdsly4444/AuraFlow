@@ -10,6 +10,7 @@ import com.catclaw.aura.data.network.NetworkClient
 import com.catclaw.aura.data.network.config.NetworkConfig
 import com.catclaw.aura.data.network.config.NetworkConstants
 import com.catclaw.aura.data.scenedescription.SceneDescriptionRepository
+import com.catclaw.aura.data.scenedescription.config.SceneDescriptionConfig
 import com.catclaw.aura.data.workflow.MomentWorkflowEngine
 import com.catclaw.aura.data.workflow.MomentWorkflowRepositoryImpl
 import com.catclaw.aura.data.workflow.MomentWorkflowStore
@@ -53,6 +54,7 @@ class AppContainer(context: Context) {
                     NetworkConstants.BASE_URL_SECONDARY to "https://jsonplaceholder.typicode.com/",
                     NetworkConstants.BASE_URL_DASHSCOPE to
                         "https://dashscope.aliyuncs.com/compatible-mode/v1/",
+                    NetworkConstants.BASE_URL_MAPBOX_API to "https://api.mapbox.com/",
                 ),
                 commonHeaders = mapOf("Accept" to "application/json"),
                 enableLogging = com.catclaw.aura.data.BuildConfig.DEBUG,
@@ -65,7 +67,8 @@ class AppContainer(context: Context) {
 
         workflowStore = MomentWorkflowStore()
         val notificationScheduler = WorkflowNotificationScheduler(appContext, workflowStore)
-        val sceneDescriptionRepository = SceneDescriptionRepository(appContext)
+        val sceneDescriptionConfig = SceneDescriptionConfig()
+        val sceneDescriptionRepository = SceneDescriptionRepository(appContext, sceneDescriptionConfig)
         workflowEngine = MomentWorkflowEngine(
             appContext,
             workflowStore,

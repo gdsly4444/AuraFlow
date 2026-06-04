@@ -59,6 +59,7 @@ class ObserveHomeListUseCaseTest {
         longitude = null,
         locationAccuracyMeters = null,
         locationProvider = null,
+        locationPlaceName = null,
         sceneDescription = null,
         sceneDescriptionError = null,
         captureErrorSummary = null,

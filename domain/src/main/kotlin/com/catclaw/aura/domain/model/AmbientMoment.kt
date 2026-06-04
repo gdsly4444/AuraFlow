@@ -39,6 +39,10 @@ data class LocationSnapshot(
     val longitude: Double,
     val accuracyMeters: Float?,
     val provider: String?,
+    val placeName: String? = null,
+    /** Mapbox feature type when available: poi, address, street, … */
+    val placeFeatureType: String? = null,
+    val geocodingError: String? = null,
     val errorMessage: String? = null,
 ) {
     val isSuccess: Boolean get() = errorMessage == null

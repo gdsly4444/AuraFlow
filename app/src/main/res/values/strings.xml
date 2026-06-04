@@ -25,6 +25,11 @@
     <string name="ambient_enable_notification_access">开启通知使用权（读取正在播放曲目）</string>
     <string name="ambient_notification_access_hint">在列表中找到 Aura 并允许访问通知，即可从音乐 App 的播放通知中读取歌名与歌手。</string>
     <string name="ambient_location_ok">纬度 %1$.6f，经度 %2$.6f\n精度约 %3$.1f m（%4$s）</string>
+    <string name="ambient_location_with_place">%1$s\n纬度 %2$.6f，经度 %3$.6f\n精度约 %4$.1f m（%5$s）</string>
+    <string name="ambient_location_place_type_poi">兴趣点 POI</string>
+    <string name="ambient_location_place_type_address">门牌地址</string>
+    <string name="ambient_location_place_type_street">街道</string>
+    <string name="ambient_geocoding_failed">地址解析失败：%1$s</string>
     <string name="ambient_location_failed">定位失败：%1$s</string>
     <string name="ambient_section_scene_description">AI 场景描述（百炼）</string>
     <string name="ambient_generate_scene_description">生成场景描述</string>
@@ -42,6 +47,7 @@
     <string name="moment_list_no_description">场景描述生成中或不可用</string>
     <string name="moment_list_meta_fallback">环境瞬间</string>
     <string name="moment_list_location_short" formatted="false">%.4f, %.4f</string>
+    <string name="moment_list_location_place">%1$s</string>
     <string name="moment_phase_queued">排队中</string>
     <string name="moment_phase_archiving">保存媒体…</string>
     <string name="moment_phase_generating">生成场景描述…</string>

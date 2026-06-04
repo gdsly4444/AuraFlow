@@ -26,16 +26,19 @@ class AmbientLocationCapture(
     @Suppress("UNUSED_PARAMETER") context: Context,
 ) {
 
+    private val reverseGeocoding = MapboxReverseGeocoding()
+
     suspend fun capture(): LocationSnapshot? = withContext(Dispatchers.Main) {
         try {
             val location = captureWithMapbox(timeoutMs = 15_000L)
             if (location != null) {
-                LocationSnapshot(
+                val fix = LocationSnapshot(
                     latitude = location.latitude,
                     longitude = location.longitude,
                     accuracyMeters = location.horizontalAccuracy?.toFloat(),
                     provider = location.source ?: PROVIDER_LABEL,
                 )
+                enrichWithAddress(fix)
             } else {
                 LocationSnapshot(
                     latitude = 0.0,
@@ -127,6 +130,15 @@ class AmbientLocationCapture(
             provider.removeLocationObserver(observer)
         }
         provider.getLastLocation(GetLocationCallback { })
+    }
+
+    private suspend fun enrichWithAddress(fix: LocationSnapshot): LocationSnapshot {
+        val geo = reverseGeocoding.resolve(fix.latitude, fix.longitude)
+        return fix.copy(
+            placeName = geo.placeName,
+            placeFeatureType = geo.featureType,
+            geocodingError = geo.errorMessage,
+        )
     }
 
     private companion object {

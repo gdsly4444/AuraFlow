@@ -92,14 +92,22 @@ class MomentCardListAdapter(
                         .joinToString(" — "),
                 )
             }
-            if (card.latitude != null && card.longitude != null) {
-                parts.add(
-                    binding.root.context.getString(
-                        R.string.moment_list_location_short,
-                        card.latitude,
-                        card.longitude,
-                    ),
-                )
+            when {
+                !card.locationPlaceName.isNullOrBlank() ->
+                    parts.add(
+                        binding.root.context.getString(
+                            R.string.moment_list_location_place,
+                            card.locationPlaceName,
+                        ),
+                    )
+                card.latitude != null && card.longitude != null ->
+                    parts.add(
+                        binding.root.context.getString(
+                            R.string.moment_list_location_short,
+                            card.latitude,
+                            card.longitude,
+                        ),
+                    )
             }
             return parts.joinToString(" · ").ifBlank {
                 binding.root.context.getString(R.string.moment_list_meta_fallback)

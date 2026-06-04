@@ -9,6 +9,7 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.withInputStream { localProperties.load(it) }
 }
 def dashscopeApiKey = localProperties.getProperty("DASHSCOPE_API_KEY", "")
+def mapboxAccessToken = localProperties.getProperty("MAPBOX_ACCESS_TOKEN", "")
 
 android {
     namespace 'com.catclaw.aura.data'
@@ -18,6 +19,7 @@ android {
         minSdk 35
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "DASHSCOPE_API_KEY", "\"${dashscopeApiKey}\""
+        buildConfigField "String", "MAPBOX_ACCESS_TOKEN", "\"${mapboxAccessToken}\""
     }
 
     compileOptions {

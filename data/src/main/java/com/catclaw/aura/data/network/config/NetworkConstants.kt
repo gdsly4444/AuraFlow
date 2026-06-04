@@ -13,6 +13,9 @@ object NetworkConstants {
     /** Alibaba Cloud DashScope OpenAI-compatible endpoint (百炼). */
     const val BASE_URL_DASHSCOPE = "dashscope"
 
+    /** Mapbox HTTP APIs (Geocoding, etc.). Trailing slash required. */
+    const val BASE_URL_MAPBOX_API = "mapbox_api"
+
     /** Example secondary host (Mapbox REST, analytics, etc.). */
     const val BASE_URL_SECONDARY = "secondary"
 }

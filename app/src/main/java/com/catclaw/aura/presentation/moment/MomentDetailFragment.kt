@@ -86,14 +86,16 @@ class MomentDetailFragment : BaseFragment(R.layout.fragment_moment_detail) {
     private fun buildHeroMeta(card: MomentCard): String {
         val time = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
             .format(Date(card.createdAtEpochMs))
-        val loc = if (card.latitude != null && card.longitude != null) {
-            getString(
-                R.string.moment_list_location_short,
-                card.latitude,
-                card.longitude,
-            )
-        } else {
-            getString(R.string.moment_detail_location_unknown)
+        val loc = when {
+            !card.locationPlaceName.isNullOrBlank() ->
+                getString(R.string.moment_list_location_place, card.locationPlaceName)
+            card.latitude != null && card.longitude != null ->
+                getString(
+                    R.string.moment_list_location_short,
+                    card.latitude,
+                    card.longitude,
+                )
+            else -> getString(R.string.moment_detail_location_unknown)
         }
         return "$time · $loc"
     }
@@ -238,13 +240,24 @@ class MomentDetailFragment : BaseFragment(R.layout.fragment_moment_detail) {
             clearMapPreview()
             return
         }
-        binding.textLocationStatus.text = getString(
-            R.string.ambient_location_ok,
-            card.latitude,
-            card.longitude,
-            card.locationAccuracyMeters ?: 0f,
-            card.locationProvider ?: "mapbox",
-        )
+        binding.textLocationStatus.text = if (!card.locationPlaceName.isNullOrBlank()) {
+            getString(
+                R.string.ambient_location_with_place,
+                card.locationPlaceName,
+                card.latitude,
+                card.longitude,
+                card.locationAccuracyMeters ?: 0f,
+                card.locationProvider ?: "mapbox",
+            )
+        } else {
+            getString(
+                R.string.ambient_location_ok,
+                card.latitude,
+                card.longitude,
+                card.locationAccuracyMeters ?: 0f,
+                card.locationProvider ?: "mapbox",
+            )
+        }
         showLocationOnMap(
             requireNotNull(card.latitude),
             requireNotNull(card.longitude),

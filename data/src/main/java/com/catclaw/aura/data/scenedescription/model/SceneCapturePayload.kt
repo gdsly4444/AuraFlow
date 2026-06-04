@@ -14,6 +14,8 @@ data class LocationPayload(
     val longitude: Double,
     val accuracyMeters: Float?,
     val provider: String?,
+    val placeName: String?,
+    val placeFeatureType: String?,
     val errorMessage: String?,
 )
 

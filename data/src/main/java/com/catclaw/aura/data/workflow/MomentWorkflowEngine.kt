@@ -87,6 +87,7 @@ class MomentWorkflowEngine(
                     longitude = snapshot.longitude,
                     locationAccuracyMeters = snapshot.locationAccuracyMeters,
                     locationProvider = snapshot.locationProvider,
+                    locationPlaceName = snapshot.locationPlaceName,
                     sceneDescription = description.text,
                     sceneDescriptionError = description.errorMessage,
                     captureErrorSummary = snapshot.captureErrorSummary(),
@@ -117,6 +118,7 @@ class MomentWorkflowEngine(
                     longitude = snapshot.longitude,
                     locationAccuracyMeters = snapshot.locationAccuracyMeters,
                     locationProvider = snapshot.locationProvider,
+                    locationPlaceName = snapshot.locationPlaceName,
                     sceneDescription = null,
                     sceneDescriptionError = e.message ?: "生成失败",
                     captureErrorSummary = snapshot.captureErrorSummary(),
@@ -172,6 +174,8 @@ class MomentWorkflowEngine(
                     longitude = requireNotNull(longitude),
                     accuracyMeters = locationAccuracyMeters,
                     provider = locationProvider,
+                    placeName = locationPlaceName,
+                    placeFeatureType = null,
                     errorMessage = locationError,
                 )
             } else {
