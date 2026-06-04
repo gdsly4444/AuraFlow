@@ -9,7 +9,8 @@ package com.catclaw.aura.data.scenedescription.config
 data class SceneDescriptionConfig(
     val model: String = "qwen3-omni-flash",
     val mediaPreference: SceneDescriptionMediaPreference = SceneDescriptionMediaPreference.VIDEO_FIRST,
-    val maxDescriptionChars: Int = 200,
+    /** Target length for memory-oriented prose (not a hard API limit). */
+    val maxDescriptionChars: Int = 560,
     /** Skip encoding when raw file size exceeds this (bytes). DashScope suggests &lt; 10MB raw. */
     val maxRawMediaBytes: Long = 10L * 1024 * 1024,
     /** Longest edge for poster JPEG sent to the API (reduces multi‑MB camera frames). */
