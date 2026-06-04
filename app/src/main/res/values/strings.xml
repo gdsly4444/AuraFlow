@@ -1,4 +1,29 @@
 <resources>
     <string name="app_name">Aura</string>
     <string name="title_map">Map</string>
+    <string name="open_ambient_capture">环境采样</string>
+    <string name="ambient_capture_title">环境瞬间采样</string>
+    <string name="ambient_capture_subtitle">一键采集动态瞬间（封面 + 约 3 秒无声短片）、5 秒内环境音、正在播放的曲目信息，以及当前位置（Mapbox 地图预览）。</string>
+    <string name="ambient_capture_trigger">采集当前环境</string>
+    <string name="ambient_permission_denied">需要相机、麦克风与定位权限才能完成采样</string>
+    <string name="ambient_section_video">动态瞬间</string>
+    <string name="ambient_video_play_hint">长按封面播放约 3 秒动态（无声，不占用音乐播放）</string>
+    <string name="ambient_video_poster_content_description">动态瞬间封面</string>
+    <string name="ambient_section_audio">环境音</string>
+    <string name="ambient_section_music">正在播放</string>
+    <string name="ambient_section_location">位置（Mapbox）</string>
+    <string name="ambient_video_ok">已录制约 %1$d ms\n%2$s</string>
+    <string name="ambient_video_failed">视频失败：%1$s</string>
+    <string name="ambient_audio_ok">已录制约 %1$d ms\n%2$s</string>
+    <string name="ambient_audio_failed">音频失败：%1$s</string>
+    <string name="ambient_audio_play">播放</string>
+    <string name="ambient_audio_pause">暂停</string>
+    <string name="ambient_audio_time">%1$s / %2$s</string>
+    <string name="ambient_music_active">系统检测到音乐播放：%1$s</string>
+    <string name="ambient_music_track">曲目：%1$s</string>
+    <string name="ambient_music_package">来源应用：%1$s</string>
+    <string name="ambient_enable_notification_access">开启通知使用权（读取正在播放曲目）</string>
+    <string name="ambient_notification_access_hint">在列表中找到 Aura 并允许访问通知，即可从音乐 App 的播放通知中读取歌名与歌手。</string>
+    <string name="ambient_location_ok">纬度 %1$.6f，经度 %2$.6f\n精度约 %3$.1f m（%4$s）</string>
+    <string name="ambient_location_failed">定位失败：%1$s</string>
 </resources>

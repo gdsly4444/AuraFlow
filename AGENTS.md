@@ -34,10 +34,14 @@ Init in `AuraApplication`. Usage: [app/docs/network.md](./app/docs/network.md) (
 
 ## Build and test
 
+Use the **system Gradle cache** (`~/.gradle`). Do not trigger wrapper downloads in CI/sandbox; if `gradle-9.4.1-bin` is already under `~/.gradle/wrapper/dists`, run offline:
+
 ```bash
-./gradlew assembleDebug
-./gradlew test
+GRADLE_USER_HOME="$HOME/.gradle" ./gradlew --offline assembleDebug
+GRADLE_USER_HOME="$HOME/.gradle" ./gradlew --offline test
 ```
+
+Or use `./scripts/gradlew-local.sh assembleDebug` (sets `GRADLE_USER_HOME` and `--offline` by default).
 
 Mapbox token: `MAPBOX_ACCESS_TOKEN` in `local.properties` (injected via `resValue`).
 

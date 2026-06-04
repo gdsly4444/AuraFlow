@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
 import androidx.fragment.app.viewModels
+import com.catclaw.aura.MainActivity
 import com.catclaw.aura.R
 import com.catclaw.aura.data.network.NetworkClient
 import com.catclaw.aura.data.network.callback.HttpCallback
@@ -24,6 +25,10 @@ class MapFragment : BaseFragment(R.layout.fragment_map) {
     private var mapView: MapView? = null
 
     override fun onBind(view: View, savedInstanceState: Bundle?) {
+        view.findViewById<View>(R.id.fab_ambient)?.setOnClickListener {
+            (requireActivity() as MainActivity).showAmbientCaptureFragment(addToBackStack = true)
+        }
+
         if (savedInstanceState == null) {
             viewModel.uiState.collectWithLifecycle { state ->
                 if (mapView == null) {

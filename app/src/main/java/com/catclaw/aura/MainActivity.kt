@@ -7,6 +7,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
+import com.catclaw.aura.ui.ambient.AmbientCaptureFragment
 import com.catclaw.aura.ui.map.MapFragment
 
 /**
@@ -33,6 +34,11 @@ class MainActivity : AppCompatActivity() {
         replaceFragment(MapFragment(), TAG_MAP, addToBackStack)
     }
 
+    /** Shows ambient capture (video + audio + music + location). */
+    fun showAmbientCaptureFragment(addToBackStack: Boolean = true) {
+        replaceFragment(AmbientCaptureFragment(), TAG_AMBIENT, addToBackStack)
+    }
+
     /**
      * Replaces the content of [R.id.fragment_container] with [fragment].
      *
@@ -55,5 +61,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val TAG_MAP = "map"
+        const val TAG_AMBIENT = "ambient_capture"
     }
 }
