@@ -7,7 +7,7 @@
 - **Language**: Kotlin
 - **Architecture**: MVVM, single-activity + Fragment switching via `MainActivity`
 - **Build**: Gradle 9.4.1, AGP 9.2.1, version catalog (`gradle/libs.versions.toml`)
-- **SDK**: `minSdk` 35, `targetSdk` 36, `compileSdk` 36 (minor API 1)
+- **SDK**: `minSdk` 35, `targetSdk` 36, `compileSdk` 36
 - **UI**: XML layouts, ViewBinding, Material
 - **Maps**: Mapbox Maps SDK 11.x (`MapView` in `MapFragment`)
 
@@ -34,16 +34,15 @@ Init in `AuraApplication`. Usage: [app/docs/network.md](./app/docs/network.md) (
 
 ## Build and test
 
-Use the **system Gradle cache** (`~/.gradle`). Do not trigger wrapper downloads in CI/sandbox; if `gradle-9.4.1-bin` is already under `~/.gradle/wrapper/dists`, run offline:
+Use the **system Gradle cache** (`~/.gradle`). First clone / fresh machine: run **online**:
 
 ```bash
-GRADLE_USER_HOME="$HOME/.gradle" ./gradlew --offline assembleDebug
-GRADLE_USER_HOME="$HOME/.gradle" ./gradlew --offline test
+./gradlew assembleDebug
 ```
 
-Or use `./scripts/gradlew-local.sh assembleDebug` (sets `GRADLE_USER_HOME` and `--offline` by default).
+Optional offline (only after dependencies are cached): `AURA_GRADLE_OFFLINE=1 ./scripts/gradlew-local.sh assembleDebug`
 
-Mapbox token: `MAPBOX_ACCESS_TOKEN` in `local.properties` (injected via `resValue`).
+Mapbox: `MAPBOX_ACCESS_TOKEN` (pk., app maps) and `MAPBOX_DOWNLOADS_TOKEN` (sk. with Downloads:Read, Gradle Maven) in `local.properties`.
 
 DashScope (百炼 scene description): `DASHSCOPE_API_KEY` in `local.properties` → `BuildConfig.DASHSCOPE_API_KEY`. Never commit real keys; rotate if exposed. See `docs/scenedescription-plan.md` and `data/scenedescription/`.
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="moment_workflow_notification_title">Aura 正在生成瞬间卡片</string>
+    <string name="moment_workflow_notification_text">%1$d 个任务进行中</string>
+    <string name="moment_workflow_channel_name">瞬间生成</string>
+</resources>

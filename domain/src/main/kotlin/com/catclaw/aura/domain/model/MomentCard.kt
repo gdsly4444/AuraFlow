@@ -1,0 +1,24 @@
+package com.catclaw.aura.domain.model
+
+data class MomentCard(
+    val id: String,
+    val createdAtEpochMs: Long,
+    val posterPath: String?,
+    val videoPath: String?,
+    val audioPath: String?,
+    val videoDurationMs: Long,
+    val audioDurationMs: Long,
+    val musicTitle: String?,
+    val musicArtist: String?,
+    val musicAlbum: String?,
+    val musicActive: Boolean,
+    val musicStatusMessage: String,
+    val musicPackageName: String?,
+    val latitude: Double?,
+    val longitude: Double?,
+    val locationAccuracyMeters: Float?,
+    val locationProvider: String?,
+    val sceneDescription: String?,
+    val sceneDescriptionError: String?,
+    val captureErrorSummary: String?,
+)

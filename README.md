@@ -109,21 +109,40 @@ Agent 协作约定 `AGENTS.md`
 git clone <repo-url> && cd Aura
 ```
 
-**② 配置密钥** — 编辑项目根目录 `local.properties`：
+**② 配置密钥** — 复制 `local.properties.example` 为 `local.properties` 并填写：
 
 ```properties
 sdk.dir=/path/to/Android/Sdk
 MAPBOX_ACCESS_TOKEN=pk.你的Mapbox公钥
+MAPBOX_DOWNLOADS_TOKEN=sk.你的Mapbox私钥
 ```
 
-> Token 经 Gradle `resValue` 注入，不会进 Git。  
-> 获取地址：[Mapbox Access Tokens](https://account.mapbox.com/access-tokens/)
+| 变量 | 用途 |
+|------|------|
+| `MAPBOX_ACCESS_TOKEN` | 应用内地图（`pk.` 公钥） |
+| `MAPBOX_DOWNLOADS_TOKEN` | Gradle 下载 Mapbox SDK（`sk.` 私钥，需 **Downloads:Read**） |
 
-**③ 编译**
+> 不要给 token 加引号。详见 [Mapbox Android 安装](https://docs.mapbox.com/android/maps/guides/install/)。
+
+**③ 编译**（首次需联网）
 
 ```bash
 ./gradlew assembleDebug
 ```
+
+<details>
+<summary><b>编译失败？</b></summary>
+
+| 现象 | 处理 |
+|------|------|
+| `Could not resolve com.mapbox.maps` | 在 `local.properties` 配置 `MAPBOX_DOWNLOADS_TOKEN`（`sk.` + Downloads:Read） |
+| `No cached version` / offline 相关 | 不要用离线首次构建；`./scripts/gradlew-local.sh` 已默认联网，仅当 `AURA_GRADLE_OFFLINE=1` 时才 `--offline` |
+| `Failed to find target android-36` | Android Studio → SDK Manager 安装 **Android API 36** |
+| `Android BaseExtension` / Hilt | 工程已改用 `AppContainer` 手动 DI，勿再启用 Hilt 插件 |
+
+若仍失败，请把完整报错（从 `FAILURE:` 或 `BUILD FAILED` 起）发出来。
+
+</details>
 
 **④ 安装**
 

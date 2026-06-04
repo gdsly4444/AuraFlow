@@ -11,9 +11,46 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
+
+def loadMapboxDownloadsToken() {
+    def fromEnv = System.getenv("MAPBOX_ACCESS_TOKEN")
+    if (fromEnv != null && !fromEnv.trim().isEmpty()) {
+        return fromEnv.trim()
+    }
+    def localFile = new File(settingsDir, "local.properties")
+    if (localFile.exists()) {
+        def props = new Properties()
+        localFile.withInputStream { props.load(it) }
+        def fromLocal = props.getProperty("MAPBOX_ACCESS_TOKEN", "").trim()
+        if (!fromLocal.isEmpty()) {
+            return fromLocal
+        }
+    }
+    def gradlePropsFile = new File(settingsDir, "gradle.properties")
+    if (gradlePropsFile.exists()) {
+        def props = new Properties()
+        gradlePropsFile.withInputStream { props.load(it) }
+        def fromGradle = props.getProperty("MAPBOX_ACCESS_TOKEN", "").trim()
+        if (!fromGradle.isEmpty()) {
+            return fromGradle
+        }
+    }
+    return ""
+}
+
+def mapboxDownloadsToken = loadMapboxDownloadsToken()
+if (mapboxDownloadsToken.isEmpty()) {
+    logger.lifecycle(
+        "MAPBOX_DOWNLOADS_TOKEN is not set. Mapbox SDK (com.mapbox.maps) may fail to download. " +
+        "Create a secret token with Downloads:Read at https://account.mapbox.com/access-tokens/ " +
+        "and add MAPBOX_DOWNLOADS_TOKEN=sk.... to local.properties (no quotes)."
+    )
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -21,9 +58,18 @@ dependencyResolutionManagement {
         mavenCentral()
         maven {
             url = uri("https://api.mapbox.com/downloads/v2/releases/maven")
+            authentication {
+                basic(org.gradle.authentication.http.BasicAuthentication)
+            }
+            credentials {
+                username = "mapbox"
+                password = mapboxDownloadsToken
+            }
         }
     }
 }
 
 rootProject.name = "Aura"
 include ':app'
+include ':domain'
+include ':data'

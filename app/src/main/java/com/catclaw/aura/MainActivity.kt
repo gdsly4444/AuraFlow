@@ -12,10 +12,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
-import com.catclaw.aura.ui.ambient.AmbientCaptureFragment
-import com.catclaw.aura.ui.map.MapFragment
-import com.catclaw.aura.ui.moment.MomentDetailFragment
-
+import com.catclaw.aura.presentation.ambient.AmbientCaptureFragment
+import com.catclaw.aura.presentation.map.MapFragment
+import com.catclaw.aura.presentation.moment.MomentDetailFragment
 /**
  * Single-activity host. Fragment navigation is handled by [replaceFragment] and screen helpers below.
  */
