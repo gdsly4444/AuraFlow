@@ -27,6 +27,11 @@ data class MomentCardEntity(
     val sceneDescription: String?,
     val sceneDescriptionError: String?,
     val captureErrorSummary: String?,
+    val themeColor: String?,
+    val thumbnailUrl: String?,
+    val videoUrl: String?,
+    val audioUrl: String?,
+    val serverStatus: String?,
 )
 
 fun MomentCardEntity.toDomain(): MomentCard = MomentCard(
@@ -51,6 +56,11 @@ fun MomentCardEntity.toDomain(): MomentCard = MomentCard(
     sceneDescription = sceneDescription,
     sceneDescriptionError = sceneDescriptionError,
     captureErrorSummary = captureErrorSummary,
+    themeColor = themeColor,
+    thumbnailUrl = thumbnailUrl,
+    videoUrl = videoUrl,
+    audioUrl = audioUrl,
+    serverStatus = serverStatus,
 )
 
 fun MomentCard.toEntity(): MomentCardEntity = MomentCardEntity(
@@ -75,4 +85,9 @@ fun MomentCard.toEntity(): MomentCardEntity = MomentCardEntity(
     sceneDescription = sceneDescription,
     sceneDescriptionError = sceneDescriptionError,
     captureErrorSummary = captureErrorSummary,
+    themeColor = themeColor,
+    thumbnailUrl = thumbnailUrl,
+    videoUrl = videoUrl,
+    audioUrl = audioUrl,
+    serverStatus = serverStatus,
 )

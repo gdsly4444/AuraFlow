@@ -2,7 +2,8 @@ package com.catclaw.aura.domain.model
 
 enum class WorkflowPhase {
     QUEUED,
-    ARCHIVING_MEDIA,
+    UPLOADING_AUDIO,
+    UPLOADING_VIDEO,
     GENERATING_DESCRIPTION,
     COMPLETED,
     FAILED,

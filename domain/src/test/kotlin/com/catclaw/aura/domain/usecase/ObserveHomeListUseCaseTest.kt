@@ -70,6 +70,8 @@ class ObserveHomeListUseCaseTest {
         override suspend fun getCard(id: String): MomentCard? = null
         override suspend fun save(card: MomentCard) = Unit
         override suspend fun delete(cardId: String) = Unit
+        override suspend fun refreshFromServer(page: Int, pageSize: Int): Result<Int> = Result.success(0)
+        override suspend fun enrichWithLocalPlayback(card: MomentCard): MomentCard = card
     }
 
     private class FakeWorkflowRepo(private val flow: Flow<List<ActiveWorkflow>>) : MomentWorkflowRepository {

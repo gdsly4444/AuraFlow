@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -20,4 +21,18 @@ interface MomentCardDao {
 
     @Query("DELETE FROM moment_cards WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("DELETE FROM moment_cards")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<MomentCardEntity>)
+
+    @Transaction
+    suspend fun replaceAll(entities: List<MomentCardEntity>) {
+        deleteAll()
+        if (entities.isNotEmpty()) {
+            insertAll(entities)
+        }
+    }
 }

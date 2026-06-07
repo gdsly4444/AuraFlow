@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.catclaw.aura.di.AppContainer
 import com.catclaw.aura.domain.model.MomentCard
+import com.catclaw.aura.domain.repository.MomentCardRepository
 import com.catclaw.aura.domain.usecase.GetMomentCardUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.launch
 class MomentDetailViewModel(
     private val cardId: String,
     private val getMomentCardUseCase: GetMomentCardUseCase,
+    private val momentCardRepository: MomentCardRepository,
 ) : ViewModel() {
 
     private val _card = MutableStateFlow<MomentCard?>(null)
@@ -21,7 +23,8 @@ class MomentDetailViewModel(
 
     init {
         viewModelScope.launch {
-            _card.value = getMomentCardUseCase(cardId)
+            val card = getMomentCardUseCase(cardId) ?: return@launch
+            _card.value = momentCardRepository.enrichWithLocalPlayback(card)
         }
     }
 
@@ -32,7 +35,11 @@ class MomentDetailViewModel(
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(MomentDetailViewModel::class.java))
-            return MomentDetailViewModel(cardId, container.getMomentCardUseCase) as T
+            return MomentDetailViewModel(
+                cardId,
+                container.getMomentCardUseCase,
+                container.momentCardRepository,
+            ) as T
         }
     }
 

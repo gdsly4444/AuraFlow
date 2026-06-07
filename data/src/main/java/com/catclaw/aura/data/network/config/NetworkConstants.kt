@@ -18,4 +18,7 @@ object NetworkConstants {
 
     /** Example secondary host (Mapbox REST, analytics, etc.). */
     const val BASE_URL_SECONDARY = "secondary"
+
+    /** Aura App Server (configured via local.properties → BuildConfig). */
+    const val BASE_URL_AURA = "aura"
 }

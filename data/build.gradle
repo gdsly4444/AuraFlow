@@ -10,6 +10,9 @@ if (localPropertiesFile.exists()) {
 }
 def dashscopeApiKey = localProperties.getProperty("DASHSCOPE_API_KEY", "")
 def mapboxAccessToken = localProperties.getProperty("MAPBOX_ACCESS_TOKEN", "")
+def auraApiBaseUrl = localProperties.getProperty("AURA_API_BASE_URL", "")
+def auraApiToken = localProperties.getProperty("AURA_API_TOKEN", "")
+def auraApiSecret = localProperties.getProperty("AURA_API_SECRET", "")
 
 android {
     namespace 'com.catclaw.aura.data'
@@ -20,6 +23,11 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "DASHSCOPE_API_KEY", "\"${dashscopeApiKey}\""
         buildConfigField "String", "MAPBOX_ACCESS_TOKEN", "\"${mapboxAccessToken}\""
+        buildConfigField "String", "AURA_API_BASE_URL", "\"${auraApiBaseUrl}\""
+        buildConfigField "String", "AURA_API_TOKEN", "\"${auraApiToken}\""
+        buildConfigField "String", "AURA_API_SECRET", "\"${auraApiSecret}\""
+        buildConfigField "String", "AURA_APP_PACKAGE", "\"com.catclaw.aura\""
+        buildConfigField "String", "AURA_APP_VERSION", "\"1.0.0\""
     }
 
     compileOptions {
@@ -53,4 +61,7 @@ dependencies {
         exclude group: 'com.google.android.gms'
     }
     implementation libs.mapbox.search.android.ndk27
+    implementation libs.androidx.datastore.preferences
+
+    testImplementation libs.junit
 }

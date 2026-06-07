@@ -1,5 +1,7 @@
 package com.catclaw.aura.presentation.moment
 
+import android.graphics.Color
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.isVisible
@@ -73,12 +75,23 @@ class MomentCardListAdapter(
             binding.textSubtitle.text = buildMetaLine(card)
             binding.textError.isVisible = !card.sceneDescriptionError.isNullOrBlank()
             binding.textError.text = card.sceneDescriptionError
+            applyThemeColor(card.themeColor)
             loadPoster(card.posterPath)
+        }
+
+        private fun applyThemeColor(themeColor: String?) {
+            val parsed = themeColor?.let { runCatching { Color.parseColor(it) }.getOrNull() }
+            if (parsed != null) {
+                binding.imagePoster.setBackgroundColor(parsed)
+            } else {
+                binding.imagePoster.setBackgroundColor(Color.TRANSPARENT)
+            }
         }
 
         private fun loadPoster(path: String?) {
             if (path != null) {
-                binding.imagePoster.setImageURI(android.net.Uri.fromFile(File(path)))
+                val uri = if (path.contains("://")) Uri.parse(path) else Uri.fromFile(File(path))
+                binding.imagePoster.setImageURI(uri)
             } else {
                 binding.imagePoster.setImageResource(R.drawable.ic_launcher_foreground)
             }

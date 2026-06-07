@@ -12,3 +12,8 @@ MAPBOX_DOWNLOADS_TOKEN=
 
 # Alibaba Cloud DashScope (百炼) — https://help.aliyun.com/zh/model-studio/get-api-key
 DASHSCOPE_API_KEY=
+
+# Aura App Server — must match server .env (API_TOKEN, API_SECRET, ALLOWED_PACKAGE_NAME)
+AURA_API_BASE_URL=http://127.0.0.1:8000
+AURA_API_TOKEN=
+AURA_API_SECRET=

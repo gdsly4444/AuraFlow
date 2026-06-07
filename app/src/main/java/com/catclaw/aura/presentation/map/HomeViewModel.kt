@@ -9,6 +9,10 @@ import com.catclaw.aura.domain.model.HomeListEntry
 import com.catclaw.aura.domain.usecase.DeleteMomentCardUseCase
 import com.catclaw.aura.domain.usecase.ObserveGeneratingStatusUseCase
 import com.catclaw.aura.domain.usecase.ObserveHomeListUseCase
+import com.catclaw.aura.data.network.interceptor.KekeHttpCall
+import com.catclaw.aura.domain.usecase.RefreshMomentListUseCase
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -18,7 +22,20 @@ class HomeViewModel(
     observeHomeListUseCase: ObserveHomeListUseCase,
     observeGeneratingStatusUseCase: ObserveGeneratingStatusUseCase,
     private val deleteMomentCardUseCase: DeleteMomentCardUseCase,
+    private val refreshMomentListUseCase: RefreshMomentListUseCase,
 ) : ViewModel() {
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            refreshMomentListUseCase()
+                .onSuccess { count ->
+                    Log.i(KekeHttpCall.TAG, "HomeViewModel refresh done count=$count")
+                }
+                .onFailure { e ->
+                    Log.e(KekeHttpCall.TAG, "HomeViewModel refresh failed", e)
+                }
+        }
+    }
 
     val generatingStatus: StateFlow<HomeGeneratingStatus?> =
         observeGeneratingStatusUseCase()
@@ -52,6 +69,7 @@ class HomeViewModel(
                 container.observeHomeListUseCase,
                 container.observeGeneratingStatusUseCase,
                 container.deleteMomentCardUseCase,
+                container.refreshMomentListUseCase,
             ) as T
         }
     }

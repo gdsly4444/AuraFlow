@@ -3,14 +3,15 @@ package com.catclaw.aura.di
 import android.content.Context
 import com.catclaw.aura.data.ambient.AmbientCaptureCoordinator
 import com.catclaw.aura.data.ambient.AmbientCapturePortImpl
+import com.catclaw.aura.data.aura.AuraUserIdStore
+import com.catclaw.aura.data.aura.media.AuraMediaDownloader
+import com.catclaw.aura.data.aura.remote.AuraApiRemote
 import com.catclaw.aura.data.moment.MomentCardRepositoryImpl
 import com.catclaw.aura.data.moment.MomentMediaArchiver
 import com.catclaw.aura.data.moment.local.AuraDatabase
 import com.catclaw.aura.data.network.NetworkClient
 import com.catclaw.aura.data.network.config.NetworkConfig
 import com.catclaw.aura.data.network.config.NetworkConstants
-import com.catclaw.aura.data.scenedescription.SceneDescriptionRepository
-import com.catclaw.aura.data.scenedescription.config.SceneDescriptionConfig
 import com.catclaw.aura.data.workflow.MomentWorkflowEngine
 import com.catclaw.aura.data.workflow.MomentWorkflowRepositoryImpl
 import com.catclaw.aura.data.workflow.MomentWorkflowStore
@@ -24,6 +25,7 @@ import com.catclaw.aura.domain.usecase.DeleteMomentCardUseCase
 import com.catclaw.aura.domain.usecase.GetMomentCardUseCase
 import com.catclaw.aura.domain.usecase.ObserveGeneratingStatusUseCase
 import com.catclaw.aura.domain.usecase.ObserveHomeListUseCase
+import com.catclaw.aura.domain.usecase.RefreshMomentListUseCase
 import com.catclaw.aura.domain.usecase.StartMomentWorkflowUseCase
 
 /**
@@ -35,8 +37,22 @@ class AppContainer(context: Context) {
 
     val workflowStore: MomentWorkflowStore = MomentWorkflowStore()
 
+    private val auraApiRemote: AuraApiRemote by lazy { AuraApiRemote.createDefault() }
+
+    private val auraUserIdStore: AuraUserIdStore by lazy { AuraUserIdStore(appContext) }
+
+    private val auraMediaDownloader: AuraMediaDownloader by lazy {
+        AuraMediaDownloader(appContext, auraApiRemote, auraUserIdStore)
+    }
+
     val momentCardRepository: MomentCardRepository by lazy {
-        MomentCardRepositoryImpl(database.momentCardDao(), mediaArchiver)
+        MomentCardRepositoryImpl(
+            database.momentCardDao(),
+            mediaArchiver,
+            auraApiRemote,
+            auraUserIdStore,
+            auraMediaDownloader,
+        )
     }
 
     val momentWorkflowRepository: MomentWorkflowRepository by lazy {
@@ -58,6 +74,10 @@ class AppContainer(context: Context) {
         ObserveGeneratingStatusUseCase(momentWorkflowRepository)
     }
 
+    val refreshMomentListUseCase: RefreshMomentListUseCase by lazy {
+        RefreshMomentListUseCase(momentCardRepository)
+    }
+
     val deleteMomentCardUseCase: DeleteMomentCardUseCase by lazy {
         DeleteMomentCardUseCase(momentCardRepository)
     }
@@ -72,11 +92,10 @@ class AppContainer(context: Context) {
 
     val workflowEngine: MomentWorkflowEngine by lazy {
         ensureNetworkInitialized()
-        MomentWorkflowEngine(
+        MomentWorkflowEngine.createDefault(
             appContext,
             workflowStore,
             momentCardRepository,
-            SceneDescriptionRepository(appContext, SceneDescriptionConfig()),
             WorkflowNotificationScheduler(appContext, workflowStore),
         ).also { WorkflowRuntime.engine = it }
     }

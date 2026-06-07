@@ -50,7 +50,8 @@
     <string name="moment_list_location_short" formatted="false">%.4f, %.4f</string>
     <string name="moment_list_location_place">%1$s</string>
     <string name="moment_phase_queued">排队中</string>
-    <string name="moment_phase_archiving">保存媒体…</string>
+    <string name="moment_phase_uploading_audio">上传音频…</string>
+    <string name="moment_phase_uploading_video">上传视频…</string>
     <string name="moment_phase_generating">生成场景描述…</string>
     <string name="moment_phase_failed">失败</string>
     <string name="moment_phase_done">完成</string>

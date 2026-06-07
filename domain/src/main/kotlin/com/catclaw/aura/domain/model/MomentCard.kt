@@ -22,4 +22,9 @@ data class MomentCard(
     val sceneDescription: String?,
     val sceneDescriptionError: String?,
     val captureErrorSummary: String?,
+    val themeColor: String? = null,
+    val thumbnailUrl: String? = null,
+    val videoUrl: String? = null,
+    val audioUrl: String? = null,
+    val serverStatus: String? = null,
 )

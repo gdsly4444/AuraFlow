@@ -3,6 +3,7 @@ package com.catclaw.aura.data.network
 import com.catclaw.aura.data.network.api.DynamicApiService
 import com.catclaw.aura.data.network.config.NetworkConfig
 import com.catclaw.aura.data.network.interceptor.CommonHeadersInterceptor
+import com.catclaw.aura.data.network.interceptor.KekeRequestLoggingInterceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -31,6 +32,7 @@ internal object RetrofitProvider {
             .readTimeout(config.readTimeoutSeconds, TimeUnit.SECONDS)
             .writeTimeout(config.writeTimeoutSeconds, TimeUnit.SECONDS)
             .apply {
+                addInterceptor(KekeRequestLoggingInterceptor())
                 if (config.commonHeaders.isNotEmpty()) {
                     addInterceptor(CommonHeadersInterceptor(config.commonHeaders))
                 }
